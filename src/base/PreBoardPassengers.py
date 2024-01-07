@@ -3,7 +3,7 @@ from Passenger import Passenger
 from Lift import Lift, LIFT_CAPACITY
 from random import sample
 
-class FloorPassengers:
+class PreBoardPassengers:
     def __init__(self, floor) -> None:
         assert floor in FLOORS
 
@@ -18,14 +18,15 @@ class FloorPassengers:
     def floor(self):
         return self._floor
     
-    def arrival(self, passengers: list[Passenger]):
+    def arrival(self, passengers: list[Passenger], start_time):
         # TODO: to log arrival time of passengers
         for passenger in passengers:
             self.target[passenger.target] += 1
+            passenger.measurement.start_journey(start_time)
         self.passengers.extend(passengers)
 
     # TODO: master module to let lifts signal what are eligible passengers
-    def board(self, eligible_floors: list[str], lift: Lift):
+    def board(self, eligible_floors: list[str], lift: Lift, lift_arrival_time):
         passenger_index = list(zip(range(len(self.passengers)), self.passengers))
         eligible_index = [item[0] for item in passenger_index if item[1].target in eligible_floors]
         
@@ -35,6 +36,8 @@ class FloorPassengers:
         eligible_passengers = self.passengers[eligible_index]
 
         # TODO: to log boarding time of passengers
+        for passenger in eligible_passengers:
+            passenger.measurement.update_lift_arrival(lift_arrival_time)
         lift.onboard(eligible_passengers)
 
         for passenger in eligible_passengers:
