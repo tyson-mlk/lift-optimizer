@@ -11,7 +11,7 @@ class Lift:
         self.floor = lift_floor.floor
         self.dir = lift_floor.dir
         self.passengers = []
-        self.passenger_targets = {
+        self.passenger_targets_counter = {
             target_floor:0 
             for target_floor in FLOORS
         }
@@ -19,10 +19,10 @@ class Lift:
     def onboard(self, passengers):
         self.passengers.extend(passengers)
         for passenger in passengers:
-            self.passenger_targets[passenger.target] += 1
+            self.passenger_targets_counter[passenger.target] += 1
 
     def alight(self, floor):
-        self.passenger_targets[floor] = 0
+        self.passenger_targets_counter[floor] = 0
         # TODO: to log arrival times of passengers
 
     def move(self, floor):
