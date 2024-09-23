@@ -8,8 +8,8 @@ DIRS = [
     'S'
 ]
 
-from PreBoardPassengers import PreBoardPassengers
-from ArrivedPassengers import ArrivedPassengers
+# from PreBoardPassengers import PreBoardPassengers
+# from ArrivedPassengers import ArrivedPassengers
 
 class LiftFloor:
     def __init__(self, floor, dir) -> None:

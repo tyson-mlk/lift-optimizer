@@ -1,3 +1,7 @@
+import sys
+
+sys.path.append('..')
+
 from utils.PassengerMetric import PassengerMetric
 import uuid
 
