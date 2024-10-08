@@ -53,33 +53,32 @@ def increment_counter(counter_type):
 
 # simulates exponential arrival time of passengers
 async def exp_gen(rate=1.0):
-    start_time = datetime.now()
-    # print('task taking ', mean, 'started')
     time_taken = expovariate(rate)
     await asyncio.sleep(time_taken)
-    end_time = datetime.now()
-    # print('task taking ', mean, 'ended taking', end_time-start_time)
 
 # simulates continuous arrival
-async def cont_exp_gen(rate=1.0, trip):
+async def cont_exp_gen(trip, rate=1.0):
     try:
         while True:
+            start_time = datetime.now()
             await exp_gen(rate=rate)
             increment_counter(counter_type=trip)
+            end_time = datetime.now()
+            # for logging
+            # print('trip', trip, 'rate ', rate, 'generated taking', end_time-start_time)
     except MemoryError:
         print('memory error')
         return None
 
 # simulates run of 3 continuous exponential processes in fixed time
 async def main():
-    jobs = [cont_exp_gen(rate=l) for l in [1, 1/3, 1/5]]
+    jobs = [cont_exp_gen(trip=k, rate=v) for k,v in trip_arrival_rates.items()]
     timeout = 20
     print('all start')
     try:
         start_time = datetime.now()
         async with asyncio.timeout(timeout):
             await asyncio.gather(*jobs)
-            # print('completed after', datetime.now()-start_time, 'seconds')
     except asyncio.TimeoutError:
         print(f'timeout after {timeout} seconds')
         print('counter', COUNTERS)
