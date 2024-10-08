@@ -1,3 +1,7 @@
+import sys
+
+sys.path.append('..')
+
 from base.Passenger import Passenger
 from base.LiftFloor import LiftFloor
 from datetime import datetime
