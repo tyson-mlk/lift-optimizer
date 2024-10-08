@@ -2,11 +2,9 @@ from math import sqrt
 import pandas as pd
 
 
-class MovingTime(Lift):
+class MovingTime:
     
     def __init__(self, a, max_v, floor_heights: dict[str, float]) -> None:
-        super.__init__(floor_heights.keys())
-
         self.floor_heights = floor_heights
         num_floors = len(floor_heights)
         self.a = a
