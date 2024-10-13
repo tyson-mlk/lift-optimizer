@@ -1,8 +1,12 @@
 from LiftFloor import LiftFloor, MAX_FLOOR, MIN_FLOOR, FLOORS, FLOOR_HEIGHTS
-from Passenger import Passenger
+from numpy.random import choice
+from collections import Counter
+# from Passenger import Passenger
 
 LIFT_CAPACITY = 12
-    
+# to initialize
+global PASSENGER_COUNTER
+
 class Lift:
     "lift class"
 
@@ -11,19 +15,57 @@ class Lift:
 
         self.floor = lift_floor.floor
         self.dir = lift_floor.dir
-        self.passengers: list[Passenger] = []
         self.passenger_targets_counter = {
             target_floor:0 
             for target_floor in FLOORS
         }
+        self.calculate_passenger_count()
 
-    def onboard(self, passengers: list[Passenger]):
-        self.passengers.extend(passengers)
-        for passenger in passengers:
-            self.passenger_targets_counter[passenger.target] += 1
+    def calculate_passenger_count(self) -> None:
+        self.passenger_count = sum([t[1] for t in self.passenger_targets_counter.items()])
 
-    def alight(self, floor):
-        self.passenger_targets_counter[floor] = 0
+    # untested
+    def has_capacity(self):
+        floor_count = len([c for c in PASSENGER_COUNTER if c[0] == self.floor])
+        return self.passenger_count + floor_count >= LIFT_CAPACITY
+
+    # untested
+    def onboard_all(self):
+        for i in PASSENGER_COUNTER:
+            if i[0] == self.floor:
+                PASSENGER_COUNTER[i] = 0
+        boarding_passengers = [c for c in PASSENGER_COUNTER if c[0] == self.floor]
+        for passenger in boarding_passengers:
+            self.passenger_targets_counter[passenger[1]] += 1
+        self.calculate_passenger_count()
+    
+    # untested
+    def random_select_passengers(self):
+        if self.has_capacity():
+            return [c[1] for c in PASSENGER_COUNTER if c[0] == self.floor]
+        else:
+            selection = choice(
+                a=sum([[i[0][1]] * i[1] for i in PASSENGER_COUNTER.items()], []),
+                size=LIFT_CAPACITY-self.passenger_count,
+                replace=False
+            )
+            return selection
+        
+    # untested
+    def onboard_selected(self):
+        selection = self.random_select_passengers()
+        selection_cnt = Counter(selection)
+        for t in selection_cnt:
+            if t > self.floor:
+                PASSENGER_COUNTER[self.floor, t, 'U'] -= selection_cnt[t]
+            elif t < self.floor:
+                PASSENGER_COUNTER[self.floor, t, 'D'] -= selection_cnt[t]
+
+            self.passenger_targets_counter[t] += selection_cnt[t]
+        self.calculate_passenger_count()
+
+    def alight(self):
+        self.passenger_targets_counter[self.floor] = 0
         # TODO: to log arrival times of passengers
 
     def move(self, floor):

@@ -5,7 +5,7 @@ MAX_FLOOR = FLOORS[-1]
 DIRS = [
     'U',
     'D',
-    'S'
+    'W'
 ]
 
 # from PreBoardPassengers import PreBoardPassengers
