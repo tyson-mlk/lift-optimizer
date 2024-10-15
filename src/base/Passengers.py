@@ -1,6 +1,5 @@
-import uuid
 import pandas as pd
-from numpy import datetime64
+from Floor import Floor
 from Passenger import Passenger
 
 class Passengers:
@@ -21,6 +20,7 @@ class Passengers:
             Passengers.schema
         )
 
+    @classmethod
     def passenger_to_df(passenger: Passenger):
         return pd.DataFrame(
             [
@@ -42,9 +42,49 @@ class Passengers:
         ).astype(
             Passengers.schema
         )
+    
+    def count_passengers(self) -> int:
+        return self.passenger_list.shape[0]
         
     def passenger_arrival(self, passenger: Passenger):
         passenger_df = Passenger.passenger_to_df(passenger)
         self.passenger_list = pd.concat([self.passenger_list, passenger_df])
+
+    def bulk_add_passengers(self, passengers):
+        self.passenger_list = pd.concat([
+            self.passenger_list,
+            passengers.passenger_list
+        ])
+
+    def combine_passenger_list(self, passenger_list):
+        return pd.concat([
+            self.passenger_list,
+            passenger_list
+        ])
+
+    def bulk_add_passenger_list(self, passenger_list):
+        self.passenger_list = pd.concat([
+            self.passenger_list,
+            passenger_list
+        ])
+
+    def remove_passengers(self):
+        self.passenger_list = self.passenger_list.loc[[],:]
+
+    def complement_passenger_list(self, selection):
+        self.passenger_list = self.passenger_list.loc[
+            self.passenger_list.index.difference(selection.index), :
+        ]
+
+    def sample_passengers(self, n) -> pd.DataFrame:
+        return self.passenger_list.sample(n)
+    
+    def filter_by_floor(self, floor: Floor) -> pd.DataFrame:
+        "filters passengers to those on a floor"
+        return self.passenger_list.loc[self.passenger_list.source_floor == floor.floor, :]
+    
+    def passenger_request_scan(self) -> pd.DataFrame:
+        "scan the floor for all passenger requests"
+        return self.passenger_list.loc[:,['source_floor', 'dir']].drop_duplicates()
 
 PASSENGERS = Passengers()
