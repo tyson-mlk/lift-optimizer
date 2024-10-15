@@ -1,4 +1,5 @@
 from LiftFloor import LiftFloor, MAX_FLOOR, MIN_FLOOR, FLOORS, FLOOR_HEIGHTS
+from Floor import Floor
 from numpy.random import choice
 from collections import Counter
 # from Passenger import Passenger
@@ -38,22 +39,13 @@ class Lift:
         for passenger in boarding_passengers:
             self.passenger_targets_counter[passenger[1]] += 1
         self.calculate_passenger_count()
-    
-    # untested
-    def random_select_passengers(self):
-        if self.has_capacity():
-            return [c[1] for c in PASSENGER_COUNTER if c[0] == self.floor]
-        else:
-            selection = choice(
-                a=sum([[i[0][1]] * i[1] for i in PASSENGER_COUNTER.items()], []),
-                size=LIFT_CAPACITY-self.passenger_count,
-                replace=False
-            )
-            return selection
         
     # untested
-    def onboard_selected(self):
-        selection = self.random_select_passengers()
+    def onboard_selected(self, floor: Floor):
+        if self.has_capacity():
+            selection = floor.passenger_targets()
+        else:
+            selection = floor.random_select_passengers()
         selection_cnt = Counter(selection)
         for t in selection_cnt:
             if t > self.floor:
