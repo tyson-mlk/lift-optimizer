@@ -5,6 +5,7 @@ class Passenger:
         self.id = uuid.uuid1()
         self.source = source
         self.target = target
+        self.dir = self.calculate_direction()
         self.trip_start = trip_start_time
         self.lift = None
         # self.measurement = None
@@ -17,6 +18,14 @@ class Passenger:
     def lift(self, new_lift):
         if new_lift.has_capacity():
             self._lift = new_lift
+
+    def calculate_direction(self):
+        if self.target > self.source:
+            return 'U'
+        elif self.target < self.source:
+            return 'D'
+        else:
+            raise Exception('problem calculating passenger direction')
 
     # def start_journey(self, start_time):
     #     self.measurement = PassengerMetric(start_time)

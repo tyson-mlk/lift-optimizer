@@ -26,10 +26,6 @@ class Floor:
     def get_floor_count(self):
         return self.passengers.passenger_list.shape[0]
     
-    def passenger_targets(self):
-        ptc = self.passenger_target_counter()
-        return sum([[i] * ptc[i] for i in ptc], [])
-    
     def passegner_arrival(self, target_floor, start_time):
         assert target_floor in FLOORS
         # self.passenger_target_counter[target_floor] += 1

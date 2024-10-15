@@ -1,6 +1,8 @@
 from LiftFloor import LiftFloor, MAX_FLOOR, MIN_FLOOR, FLOORS, FLOOR_HEIGHTS
 from Floor import Floor
+from Passengers import Passengers
 from numpy.random import choice
+import pandas as pd
 from collections import Counter
 # from Passenger import Passenger
 
@@ -16,17 +18,16 @@ class Lift:
 
         self.floor = lift_floor.floor
         self.dir = lift_floor.dir
-        self.passenger_targets_counter = {
-            target_floor:0 
-            for target_floor in FLOORS
-        }
+        self.passengers: Passengers = Passengers()
         self.calculate_passenger_count()
 
     def calculate_passenger_count(self) -> None:
-        self.passenger_count = sum([c for ptc, c in self.passenger_targets_counter.items()])
+        self.passenger_count = self.passengers.passenger_list.shape[0]
 
-    def get_current_floor_pc(self):
-        return filter(lambda x: x.floor() == self.floor, FLOOR_PASSENGER_COUNTER)
+    def get_current_floor_count(self):
+        return FLOOR_PASSENGER_COUNTER.loc[
+            FLOOR_PASSENGER_COUNTER.source_floor == self.floor, :
+        ]
 
     # untested
     def has_capacity(self):
@@ -37,23 +38,27 @@ class Lift:
     def onboard_all(self):
         floor = self.get_current_floor_pc()
         floor.onboard_all()
-        for target_floor in floor.passengers:
-            self.passenger_targets_counter[target_floor] += 1
+        self.passengers.passenger_list = pd.concat([
+            self.passengers.passenger_list,
+            floor.passengers.passenger_list
+        ])
         self.calculate_passenger_count()
         
     # untested
     def onboard_selected(self, floor: Floor):
         if self.has_capacity():
-            selection = floor.passengers
+            selection = floor.passengers.passenger_list
         else:
             selection = floor.random_select_passengers()
         floor.onboard_selected(selection)
-        for t in selection:
-            self.passenger_targets_counter[t] += 1
+        self.passengers.passenger_list = pd.concat([
+            self.passengers.passenger_list,
+            selection
+        ])
         self.calculate_passenger_count()
 
     def alight(self):
-        self.passenger_targets_counter[self.floor] = 0
+        self.passengers.passenger_list = self.passengers.passenger_list.loc[[],:]
         # TODO: to log arrival times of passengers
 
     def move(self, floor):
@@ -77,58 +82,72 @@ class Lift:
         old_height = FLOOR_HEIGHTS[old_floor]
         return distance_lookup( abs( new_height - old_height))
     
-    def next_passenger_target(self):
-        passenger_targets = {
-            t for t in self.passenger_targets_counter
-            if self.passenger_targets_counter[t] > 0
-        }
+    def next_lift_passenger_target(self):
+        passenger_targets = self.passengers.passenger_list.loc[
+            :,['source_floor', 'dir']
+        ].drop_duplicates()
+        if passenger_targets.shape[0] == 0:
+            return None
         if self.dir == 'U':
-            floor_scan = {f for f in passenger_targets if f > self.floor}
-            if len(floor_scan) > 0:
-                return min(floor_scan)
-            else:
-                floor_scan = {f for f in passenger_targets if f < self.floor}
-                if len(floor_scan) > 0:
-                    return max(floor_scan)
-                else:
-                    return None
-        else:
-            floor_scan = {f for f in passenger_targets if f < self.floor}
-            if len(floor_scan) > 0:
-                return max(floor_scan)
-            else:
-                floor_scan = {f for f in passenger_targets if f > self.floor}
-                if len(floor_scan) > 0:
-                    return min(floor_scan)
-                else:
-                    return None
+            floor_scan = passenger_targets.loc[
+                (passenger_targets.source_floor > self.floor) &
+                (passenger_targets.dir == 'U'), :
+            ]
+            if floor_scan.shape[0] > 0:
+                return floor_scan.source_floor.min()
+            floor_scan = passenger_targets.loc[
+                (passenger_targets.dir == 'D'), :
+            ]
+            if floor_scan.shape[0] > 0:
+                return floor_scan.source_floor.max()
+            return passenger_targets.source_floor.min()
+        elif self.dir == 'D':
+            floor_scan = passenger_targets.loc[
+                (passenger_targets.source_floor < self.floor) &
+                (passenger_targets.dir == 'D'), :
+            ]
+            if floor_scan.shape[0] > 0:
+                return floor_scan.source_floor.min()
+            floor_scan = passenger_targets.loc[
+                (passenger_targets.dir == 'U'), :
+            ]
+            if floor_scan.shape[0] > 0:
+                return floor_scan.source_floor.min()
+            return passenger_targets.source_floor.max()
     
-    def next_target_baseline(self, floor_counter):
-        targets = {
-            f for f in FLOORS
-            if self.passenger_targets_counter[f] > 0 or
-            floor_counter[f] > 0
-        }
+    def next_overall_target_baseline(self):
+        passenger_targets = pd.concat([
+            FLOOR_PASSENGER_COUNTER,
+            self.passengers.passenger_list
+        ]).loc[:,['source_floor', 'dir']].drop_duplicates()
+        if passenger_targets.shape[0] == 0:
+            return None
         if self.dir == 'U':
-            floor_scan = {f for f in targets if f > self.floor}
-            if len(floor_scan) > 0:
-                return min(floor_scan)
-            else:
-                floor_scan = {f for f in targets if f < self.floor}
-                if len(floor_scan) > 0:
-                    return max(floor_scan)
-                else:
-                    return None
-        else:
-            floor_scan = {f for f in targets if f < self.floor}
-            if len(floor_scan) > 0:
-                return max(floor_scan)
-            else:
-                floor_scan = {f for f in targets if f > self.floor}
-                if len(floor_scan) > 0:
-                    return min(floor_scan)
-                else:
-                    return None
+            floor_scan = passenger_targets.loc[
+                (passenger_targets.source_floor > self.floor) &
+                (passenger_targets.dir == 'U'), :
+            ]
+            if floor_scan.shape[0] > 0:
+                return floor_scan.source_floor.min()
+            floor_scan = passenger_targets.loc[
+                (passenger_targets.dir == 'D'), :
+            ]
+            if floor_scan.shape[0] > 0:
+                return floor_scan.source_floor.max()
+            return passenger_targets.source_floor.min()
+        elif self.dir == 'D':
+            floor_scan = passenger_targets.loc[
+                (passenger_targets.source_floor < self.floor) &
+                (passenger_targets.dir == 'D'), :
+            ]
+            if floor_scan.shape[0] > 0:
+                return floor_scan.source_floor.min()
+            floor_scan = passenger_targets.loc[
+                (passenger_targets.dir == 'U'), :
+            ]
+            if floor_scan.shape[0] > 0:
+                return floor_scan.source_floor.min()
+            return passenger_targets.source_floor.max()
 
 
     # TODO: move function to main control    

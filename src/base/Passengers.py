@@ -8,6 +8,7 @@ class Passengers:
         'id': str,
         'source': str,
         'target': str,
+        'dir': str,
         'trip_start_time': 'datetime64[ns]',
         'board_time': 'datetime64[ns]',
         'dest_arrival_time': 'datetime64[ns]'
@@ -27,6 +28,7 @@ class Passengers:
                     passenger.id,
                     passenger.source,
                     passenger.target,
+                    passenger.dir,
                     passenger.trip_start,
                     passenger.board_time
                         if 'board_time' in passenger.__dict__.keys()
