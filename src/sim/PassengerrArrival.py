@@ -1,12 +1,14 @@
 import asyncio
+from base.Floor import Floor
 from random import expovariate
 from datetime import datetime
 
-FLOORS = list(str(i).zfill(3) for i in range(1, 5))
+FLOORS = list(Floor(str(i).zfill(3)) for i in range(1, 5))
 FLOOR_HEIGHTS = {'001': 0, '002': 5, '003': 8, '004': 11}
-TRIPS = [
-    (source, target, 'U' if target > source else 'D')
-    for source in FLOORS for target in FLOORS if source != target
+TRIPS = [(
+    source.floor(), target.floor(),
+    'U' if target.floor() > source.floor() else 'D'
+    )   for source in FLOORS for target in FLOORS if source != target
 ]
 COUNTERS = {t:0 for t in TRIPS}
 
@@ -50,6 +52,11 @@ class Trip:
 
 def increment_counter(counter_type):
     COUNTERS[counter_type] += 1
+
+# untested
+def passenger_arrival(source_floor, target_floor):
+    floor = filter(lambda x: x.floor() == source_floor, FLOORS)
+    floor.passenger_arrival(target_floor)
 
 # simulates exponential arrival time of passengers
 async def exp_gen(rate=1.0):
