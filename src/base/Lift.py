@@ -37,14 +37,14 @@ class Lift:
     def onboard_all(self):
         floor = self.get_current_floor_pc()
         floor.onboard_all()
-        for target_floor in floor.passenger_targets():
+        for target_floor in floor.passengers:
             self.passenger_targets_counter[target_floor] += 1
         self.calculate_passenger_count()
         
     # untested
     def onboard_selected(self, floor: Floor):
         if self.has_capacity():
-            selection = floor.passenger_targets()
+            selection = floor.passengers
         else:
             selection = floor.random_select_passengers()
         floor.onboard_selected(selection)
