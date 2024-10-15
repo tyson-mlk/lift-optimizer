@@ -23,6 +23,9 @@ class Floor:
     def passenger_target_counter(self):
         return self._passenger_target_counter
     
+    def get_floor_count(self):
+        return sum([c for ptc, c in self.passenger_target_counter.items()])
+    
     def passenger_targets(self):
         ptc = self.passenger_target_counter()
         return sum([[i] * ptc[i] for i in ptc], [])
@@ -39,6 +42,10 @@ class Floor:
 
     def onboard_all(self):
         self.reset_passenger_counter()
+
+    def onboard_selected(self, selection):
+        for target_floor in selection:
+            self.passenger_target_counter[target_floor] -= 1
 
     def random_select_passengers(self, lift: Lift):
         selection = choice(

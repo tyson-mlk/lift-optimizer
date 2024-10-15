@@ -6,7 +6,7 @@ from collections import Counter
 
 LIFT_CAPACITY = 12
 # to initialize
-global PASSENGER_COUNTER
+global FLOOR_PASSENGER_COUNTER
 
 class Lift:
     "lift class"
@@ -23,21 +23,22 @@ class Lift:
         self.calculate_passenger_count()
 
     def calculate_passenger_count(self) -> None:
-        self.passenger_count = sum([t[1] for t in self.passenger_targets_counter.items()])
+        self.passenger_count = sum([c for ptc, c in self.passenger_targets_counter.items()])
+
+    def get_current_floor_pc(self):
+        return filter(lambda x: x.floor() == self.floor, FLOOR_PASSENGER_COUNTER)
 
     # untested
     def has_capacity(self):
-        floor_count = len([c for c in PASSENGER_COUNTER if c[0] == self.floor])
+        floor_count = self.get_current_floor_pc().get_floor_count()
         return self.passenger_count + floor_count >= LIFT_CAPACITY
 
     # untested
     def onboard_all(self):
-        for i in PASSENGER_COUNTER:
-            if i[0] == self.floor:
-                PASSENGER_COUNTER[i] = 0
-        boarding_passengers = [c for c in PASSENGER_COUNTER if c[0] == self.floor]
-        for passenger in boarding_passengers:
-            self.passenger_targets_counter[passenger[1]] += 1
+        floor = self.get_current_floor_pc()
+        floor.onboard_all()
+        for target_floor in floor.passenger_targets():
+            self.passenger_targets_counter[target_floor] += 1
         self.calculate_passenger_count()
         
     # untested
@@ -46,14 +47,9 @@ class Lift:
             selection = floor.passenger_targets()
         else:
             selection = floor.random_select_passengers()
-        selection_cnt = Counter(selection)
-        for t in selection_cnt:
-            if t > self.floor:
-                PASSENGER_COUNTER[self.floor, t, 'U'] -= selection_cnt[t]
-            elif t < self.floor:
-                PASSENGER_COUNTER[self.floor, t, 'D'] -= selection_cnt[t]
-
-            self.passenger_targets_counter[t] += selection_cnt[t]
+        floor.onboard_selected(selection)
+        for t in selection:
+            self.passenger_targets_counter[t] += 1
         self.calculate_passenger_count()
 
     def alight(self):
