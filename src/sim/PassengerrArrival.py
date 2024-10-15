@@ -54,9 +54,9 @@ def increment_counter(counter_type):
     COUNTERS[counter_type] += 1
 
 # untested
-def passenger_arrival(source_floor, target_floor):
+def passenger_arrival(source_floor, target_floor, start_time):
     floor = filter(lambda x: x.floor() == source_floor, FLOORS)
-    floor.passenger_arrival(target_floor)
+    floor.passenger_arrival(target_floor, start_time)
 
 # simulates exponential arrival time of passengers
 async def exp_gen(rate=1.0):
@@ -66,10 +66,12 @@ async def exp_gen(rate=1.0):
 # simulates continuous arrival
 async def cont_exp_gen(trip, rate=1.0):
     try:
+        source_floor = trip[0]
+        target_floor = trip[1]
         while True:
             start_time = datetime.now()
             await exp_gen(rate=rate)
-            increment_counter(counter_type=trip)
+            passenger_arrival(source_floor, target_floor, datetime.now())
             end_time = datetime.now()
             # for logging
             # print('trip', trip, 'rate ', rate, 'generated taking', end_time-start_time)

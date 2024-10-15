@@ -1,5 +1,7 @@
 from numpy.random import choice
 from Lift import LIFT_CAPACITY, Lift
+from Passenger import Passenger
+from Passengers import Passengers, PASSENGERS
 
 FLOORS = list(str(i).zfill(3) for i in range(20))
 FLOOR_HEIGHTS = {str(i).zfill(3):i for i in range(20)}
@@ -30,9 +32,11 @@ class Floor:
         ptc = self.passenger_target_counter()
         return sum([[i] * ptc[i] for i in ptc], [])
     
-    def passegner_arrival(self, target_floor):
+    def passegner_arrival(self, target_floor, start_time):
         assert target_floor in FLOORS
-        self.passenger_target_counter[target_floor] += 1
+        # self.passenger_target_counter[target_floor] += 1
+        passenger = Passenger(self.floor, target_floor, start_time)
+        PASSENGERS.passenger_arrival(passenger)
 
     def reset_passenger_counter(self):
         self.passenger_target_counter = {

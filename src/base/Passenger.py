@@ -1,8 +1,3 @@
-import sys
-
-sys.path.append('..')
-
-from utils.PassengerMetric import PassengerMetric
 import uuid
 
 class Passenger:
@@ -10,22 +5,13 @@ class Passenger:
         self.id = uuid.uuid1()
         self.source = source
         self.target = target
-        self.floor = source
         self.trip_start = trip_start_time
         self.lift = None
         # self.measurement = None
-
-    @property
-    def floor(self):
-        return self._floor
     
     @property
     def lift(self):
         return self._lift
-    
-    @floor.setter
-    def floor(self, new_floor):
-        self._floor = new_floor
 
     @lift.setter
     def lift(self, new_lift):

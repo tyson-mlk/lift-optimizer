@@ -45,4 +45,4 @@ class Passengers:
         passenger_df = Passenger.passenger_to_df(passenger)
         self.passenger_list = pd.concat([self.passenger_list, passenger_df])
 
-    
+PASSENGERS = Passengers()
