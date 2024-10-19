@@ -1,6 +1,7 @@
 import pandas as pd
 
 from base.Passenger import Passenger
+from base.Floor import Floor, FLOOR_LIST
 
 class Passengers:
     schema = {

@@ -4,12 +4,13 @@ from random import expovariate
 from datetime import datetime
 from base.Passengers import PASSENGERS
 
-FLOORS = list(Floor(str(i).zfill(3)) for i in range(1, 5))
+FLOORS = list(str(i).zfill(3) for i in range(1, 5))
 FLOOR_HEIGHTS = {'001': 0, '002': 5, '003': 8, '004': 11}
+FLOOR_LIST = list(Floor(floor, FLOOR_HEIGHTS[floor]) for floor in FLOORS)
 TRIPS = [(
-    source.floor(), target.floor(),
-    'U' if target.floor() > source.floor() else 'D'
-    )   for source in FLOORS for target in FLOORS if source != target
+    source.floor, target.floor,
+    'U' if target.floor > source.floor else 'D'
+    )   for source in FLOOR_LIST for target in FLOOR_LIST if source != target
 ]
 COUNTERS = {t:0 for t in TRIPS}
 

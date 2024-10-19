@@ -1,18 +1,19 @@
-from base.Passengers import Passengers, PASSENGERS
-
-# FLOORS = list(str(i).zfill(3) for i in range(20))
-
 class Floor:
     def __init__(self, floor, height) -> None:
-        # assert floor in FLOORS
-
+        # assert floor in FLOOR_LIST
         self.floor = floor
         self.height = height
+
+        from base.Passengers import Passengers
         self.passengers: Passengers = Passengers()
 
     @property
     def floor(self):
         return self._floor
+    
+    @floor.setter
+    def floor(self, new_floor):
+        self._floor = new_floor
 
     # @property
     # def passenger_target_counter(self):

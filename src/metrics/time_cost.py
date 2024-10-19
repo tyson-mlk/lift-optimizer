@@ -1,5 +1,3 @@
-import base.LiftFloor
-
 class TimeCost:
 
     def __init__(self) -> None:

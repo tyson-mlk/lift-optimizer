@@ -1,4 +1,3 @@
-from base.LiftFloor import LiftFloor
 from base.Floor import Floor, FLOOR_LIST, MAX_FLOOR, MIN_FLOOR, FLOOR_HEIGHTS
 from base.Passengers import Passengers, PASSENGERS
 # from Passenger import Passenger
@@ -8,11 +7,10 @@ LIFT_CAPACITY_DEFAULT = 12
 class Lift:
     "lift class"
 
-    def __init__(self, lift_floor, capacity = LIFT_CAPACITY_DEFAULT) -> None:
-        assert type(lift_floor) is LiftFloor
+    def __init__(self, floor, dir, capacity = LIFT_CAPACITY_DEFAULT) -> None:
 
-        self.floor = lift_floor.floor
-        self.dir = lift_floor.dir
+        self.floor = floor
+        self.dir = dir
         self.capacity = capacity
         self.passengers: Passengers = Passengers()
         self.calculate_passenger_count()
