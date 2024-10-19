@@ -1,6 +1,6 @@
 import pandas as pd
-from Floor import Floor
-from Passenger import Passenger
+
+from base.Passenger import Passenger
 
 class Passengers:
     schema = {
@@ -70,6 +70,18 @@ class Passengers:
 
     def remove_passengers(self):
         self.passenger_list = self.passenger_list.loc[[],:]
+
+    def add_passenger_list(self, passenger_df: pd.DataFrame):
+        self.passenger_list = pd.concat([self.passenger_list, passenger_df])
+
+    def passegner_arrival(self, source_floor, target_floor, start_time):
+        # assert target_floor in FLOORS
+        # self.passenger_target_counter[target_floor] += 1
+        passenger = Passenger(source_floor, target_floor, start_time)
+        passenger_df = Passenger.passenger_to_df(passenger)
+        self.add_passenger_list(passenger_df)
+        floor = filter(lambda x: x.floor == source_floor, FLOOR_LIST)
+        floor.passengers.add_passenger_list(passenger_df)
 
     def complement_passenger_list(self, selection):
         self.passenger_list = self.passenger_list.loc[

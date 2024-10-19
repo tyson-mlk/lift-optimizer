@@ -1,4 +1,4 @@
-from Passenger import Passenger
+from base.Passenger import Passenger
 
 class ArrivedPassengers(Passenger):
     def __init__(self, source, target, arrival_time):

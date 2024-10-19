@@ -1,7 +1,8 @@
-from LiftFloor import FLOORS
-from Passenger import Passenger
-from Lift import Lift, LIFT_CAPACITY
 from random import sample
+
+from base.LiftFloor import FLOORS
+from base.Passenger import Passenger
+from base.Lift import Lift
 
 class PreBoardPassengers:
     def __init__(self, floor) -> None:
@@ -31,8 +32,8 @@ class PreBoardPassengers:
         eligible_index = [item[0] for item in passenger_index if item[1].target in eligible_floors]
         
         # under-capacity lift
-        if len(eligible_index) + lift.passenger_count > LIFT_CAPACITY:
-            eligible_index = sample( eligible_index, LIFT_CAPACITY - lift.passenger_count)
+        if len(eligible_index) + lift.passenger_count > lift.capacity:
+            eligible_index = sample( eligible_index, lift.capacity - lift.passenger_count)
         eligible_passengers = self.passengers[eligible_index]
 
         # TODO: to log boarding time of passengers

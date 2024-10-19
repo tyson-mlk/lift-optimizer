@@ -1,8 +1,4 @@
-import sys
-
-sys.path.append('../base')
-
-import LiftFloor
+import base.LiftFloor
 
 class TimeCost:
 

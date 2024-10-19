@@ -1,18 +1,19 @@
-from LiftFloor import LiftFloor
-from Floor import Floor, FLOOR_LIST, MAX_FLOOR, MIN_FLOOR, FLOOR_HEIGHTS
-from Passengers import Passengers, PASSENGERS
+from base.LiftFloor import LiftFloor
+from base.Floor import Floor, FLOOR_LIST, MAX_FLOOR, MIN_FLOOR, FLOOR_HEIGHTS
+from base.Passengers import Passengers, PASSENGERS
 # from Passenger import Passenger
 
-LIFT_CAPACITY = 12
+LIFT_CAPACITY_DEFAULT = 12
 
 class Lift:
     "lift class"
 
-    def __init__(self, lift_floor) -> None:
+    def __init__(self, lift_floor, capacity = LIFT_CAPACITY_DEFAULT) -> None:
         assert type(lift_floor) is LiftFloor
 
         self.floor = lift_floor.floor
         self.dir = lift_floor.dir
+        self.capacity = capacity
         self.passengers: Passengers = Passengers()
         self.calculate_passenger_count()
 
@@ -31,7 +32,7 @@ class Lift:
     # untested
     def has_capacity(self):
         floor_count = self.get_current_floor_pc().get_floor_count()
-        return self.passenger_count + floor_count >= LIFT_CAPACITY
+        return self.passenger_count + floor_count >= self.capacity
 
     # untested
     def onboard_all(self):
@@ -45,7 +46,7 @@ class Lift:
         if self.has_capacity():
             selection = floor.passengers.passenger_list
         else:
-            selection = floor.random_select_passengers(self)
+            selection = floor.random_select_passengers(self, self.capacity, self.passenger_count)
         floor.onboard_selected(selection)
         self.passengers.bulk_add_passenger_list(selection)
         self.calculate_passenger_count()

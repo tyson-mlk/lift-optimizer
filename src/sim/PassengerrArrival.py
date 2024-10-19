@@ -56,8 +56,7 @@ def increment_counter(counter_type):
 
 # untested
 def passenger_arrival(source_floor, target_floor, start_time):
-    floor = filter(lambda x: x.floor() == source_floor, FLOORS)
-    floor.passenger_arrival(target_floor, start_time)
+    PASSENGERS.passenger_arrival(source_floor, target_floor, start_time)
 
 # simulates exponential arrival time of passengers
 async def exp_gen(rate=1.0):

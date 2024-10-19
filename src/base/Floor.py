@@ -1,7 +1,4 @@
-import pandas as pd
-from Lift import LIFT_CAPACITY, Lift
-from Passenger import Passenger
-from Passengers import Passengers, PASSENGERS
+from base.Passengers import Passengers, PASSENGERS
 
 # FLOORS = list(str(i).zfill(3) for i in range(20))
 
@@ -23,13 +20,6 @@ class Floor:
     
     def get_floor_count(self):
         return self.passengers.count_passengers()
-    
-    def passegner_arrival(self, target_floor, start_time):
-        # assert target_floor in FLOORS
-        # self.passenger_target_counter[target_floor] += 1
-        passenger = Passenger(self.floor, target_floor, start_time)
-        PASSENGERS.passenger_arrival(passenger)
-        self.passengers.passenger_arrival(passenger)
 
     def reset_passenger_counter(self):
         self.passengers.remove_passengers()
@@ -42,10 +32,10 @@ class Floor:
         self.passengers.complement_passenger_list(selection)
 
     # untested
-    def random_select_passengers(self, lift: Lift):
-        return self.passengers.sample_passengers(n=LIFT_CAPACITY-lift.passenger_count)
+    def random_select_passengers(self, capacity, passenger_count):
+        return self.passengers.sample_passengers(n=capacity-passenger_count)
     
-    def select_passengers_by_earliest_arrival(self, lift: Lift):
+    def select_passengers_by_earliest_arrival(self):
         pass
 
 FLOOR_LIST = []
