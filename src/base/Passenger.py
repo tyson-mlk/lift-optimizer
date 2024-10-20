@@ -1,7 +1,8 @@
 import uuid
+from datetime import datetime
 
 class Passenger:
-    def __init__(self, source, target, trip_start_time):
+    def __init__(self, source, target, trip_start_time = datetime.now()):
         self.id = uuid.uuid1()
         self.source = source
         self.target = target
@@ -16,7 +17,7 @@ class Passenger:
 
     @lift.setter
     def lift(self, new_lift):
-        if new_lift.has_capacity():
+        if new_lift is not None and new_lift.has_capacity():
             self._lift = new_lift
 
     def calculate_direction(self):
