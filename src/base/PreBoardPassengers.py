@@ -1,18 +1,18 @@
 from random import sample
 
-from base.Lift import FLOOR_LIST
 from base.Passenger import Passenger
+from base.FloorList import FLOOR_LIST
 from base.Lift import Lift
 
 class PreBoardPassengers:
     def __init__(self, floor) -> None:
-        assert floor in FLOOR_LIST
+        assert floor in FLOOR_LIST.list_floors()
 
         self.floor = floor
         self.passengers = []
         self.target = {
             target_floor:0 
-            for target_floor in FLOOR_LIST
+            for target_floor in FLOOR_LIST.list_floors()
         }
 
     @property

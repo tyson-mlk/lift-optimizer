@@ -1,5 +1,5 @@
 from base.Floor import Floor, FLOOR_LIST, MAX_FLOOR, MIN_FLOOR, FLOOR_HEIGHTS
-from base.Passengers import Passengers, PASSENGERS
+from base.PassengerList import PassengerList, PASSENGERS
 # from Passenger import Passenger
 
 LIFT_CAPACITY_DEFAULT = 12
@@ -12,14 +12,14 @@ class Lift:
         self.floor = floor
         self.dir = dir
         self.capacity = capacity
-        self.passengers: Passengers = Passengers()
+        self.passengers: PassengerList = PassengerList()
         self.calculate_passenger_count()
 
     def calculate_passenger_count(self) -> None:
         self.passenger_count = self.passengers.count_passengers()
 
     def get_current_floor(self) -> Floor:
-        return filter(lambda x: x.floor == self.floor, FLOOR_LIST)
+        return FLOOR_LIST.get_floor(self.floor)
 
     def get_current_floor_passengers(self):
         return PASSENGERS.filter_by_floor(self.get_current_floor())
@@ -42,11 +42,12 @@ class Lift:
     # untested
     def onboard_selected(self, floor: Floor):
         if self.has_capacity():
-            selection = floor.passengers.passenger_list
+            selection = floor.passengers.df
         else:
             selection = floor.random_select_passengers(self, self.capacity, self.passenger_count)
-        floor.onboard_selected(selection)
-        self.passengers.bulk_add_passenger_list(selection)
+        passenger_list = PassengerList(selection)
+        floor.onboard_selected(passenger_list)
+        self.passengers.bulk_add_passengers(passenger_list)
         self.calculate_passenger_count()
 
     def alight(self):
@@ -106,7 +107,7 @@ class Lift:
             return passenger_targets.source_floor.max()
     
     def next_overall_target_baseline(self):
-        target = Passengers()
+        target = PassengerList()
         target.bulk_add_passengers(self.passengers)
         target.bulk_add_passengers(PASSENGERS)
         overall_targets = target.passenger_request_scan()

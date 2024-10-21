@@ -1,11 +1,10 @@
 class Floor:
     def __init__(self, floor, height) -> None:
-        # assert floor in FLOOR_LIST
         self.floor = floor
         self.height = height
 
-        from base.Passengers import Passengers
-        self.passengers: Passengers = Passengers()
+        from base.PassengerList import PassengerList
+        self.passengers: PassengerList = PassengerList()
 
     @property
     def floor(self):
@@ -29,8 +28,8 @@ class Floor:
         self.reset_passenger_counter()
 
     # untested
-    def onboard_selected(self, selection):
-        self.passengers.complement_passenger_list(selection)
+    def onboard_selected(self, passenger_list):
+        self.passengers.complement_passenger_list(passenger_list)
 
     # untested
     def random_select_passengers(self, capacity, passenger_count):
@@ -38,11 +37,3 @@ class Floor:
     
     def select_passengers_by_earliest_arrival(self):
         pass
-
-FLOOR_LIST = []
-FLOORS = list(str(i).zfill(3) for i in range(20))
-MIN_FLOOR = min(FLOORS)
-MAX_FLOOR = max(FLOORS)
-FLOOR_HEIGHTS = {str(i).zfill(3):i for i in range(20)}
-for floor in list(str(i).zfill(3) for i in range(20)):
-    FLOOR_LIST.append(Floor(floor, FLOOR_HEIGHTS[floor]))
