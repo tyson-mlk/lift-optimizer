@@ -2,7 +2,7 @@ import pandas as pd
 from datetime import datetime
 
 from base.Passenger import Passenger
-from base.Floor import Floor, FLOOR_LIST
+from base.Floor import Floor
 
 class PassengerList:
     schema = {
@@ -72,6 +72,8 @@ class PassengerList:
         # assert target_floor in FLOORS
         passenger_df = PassengerList.passenger_to_df(passenger)
         self.add_passenger_list(passenger_df)
+        
+        from base.FloorList import FLOOR_LIST
         floor = FLOOR_LIST.get_floor(passenger.source)
         floor.passengers.add_passenger_list(passenger_df)
 

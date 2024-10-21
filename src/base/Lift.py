@@ -1,5 +1,6 @@
-from base.Floor import Floor, FLOOR_LIST, MAX_FLOOR, MIN_FLOOR, FLOOR_HEIGHTS
+from base.Floor import Floor
 from base.PassengerList import PassengerList, PASSENGERS
+from base.FloorList import FLOOR_LIST, MAX_FLOOR, MIN_FLOOR, FLOOR_HEIGHTS
 # from Passenger import Passenger
 
 LIFT_CAPACITY_DEFAULT = 12

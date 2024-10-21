@@ -22,4 +22,4 @@ FLOOR_HEIGHTS = {i:float(i) for i in FLOORS}
 MIN_FLOOR = min(FLOORS)
 MAX_FLOOR = max(FLOORS)
 for floor in FLOORS:
-    FLOOR_LIST.append(Floor(floor, FLOOR_HEIGHTS[floor]))
+    FLOOR_LIST.add_floor(Floor(floor, FLOOR_HEIGHTS[floor]))
