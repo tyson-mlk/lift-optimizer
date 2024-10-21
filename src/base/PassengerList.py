@@ -8,6 +8,7 @@ class PassengerList:
     schema = {
         'id': str,
         'source': str,
+        'current': str,
         'target': str,
         'dir': str,
         'trip_start_time': 'datetime64[ns]',
@@ -15,10 +16,10 @@ class PassengerList:
         'dest_arrival_time': 'datetime64[ns]'
     }
 
-    def __init__(self, passenger_list = None):
-        if passenger_list is not None:
+    def __init__(self, passenger_list_df = None):
+        if passenger_list_df is not None:
             self.df: pd.DataFrameType = pd.DataFrame(
-                passenger_list,
+                passenger_list_df,
                 columns=PassengerList.schema
             ).astype(
                 PassengerList.schema
@@ -37,6 +38,7 @@ class PassengerList:
                 [
                     passenger.id,
                     passenger.source,
+                    passenger.current,
                     passenger.target,
                     passenger.dir,
                     passenger.trip_start,
@@ -57,13 +59,17 @@ class PassengerList:
         return self.df.shape[0]
 
     def bulk_add_passengers(self, passengers):
+        print(passengers.df.shape)
         self.df = pd.concat([
             self.df,
             passengers.df
         ])
 
-    def remove_passengers(self):
-        self.df = self.df.loc[[],:]
+    def remove_passengers(self, passengers = None):
+        if passengers == None:
+            self.df = self.df.loc[[],:]
+        else:
+            self.complement_passenger_list(passengers)
 
     def add_passenger_list(self, passenger_df: pd.DataFrame):
         self.df = pd.concat([self.df, passenger_df])
@@ -77,20 +83,22 @@ class PassengerList:
         floor = FLOOR_LIST.get_floor(passenger.source)
         floor.passengers.add_passenger_list(passenger_df)
 
+    # to test
     def complement_passenger_list(self, passenger_list):
         self.df = self.df.loc[
             self.df.index.difference(passenger_list.df.index), :
         ]
 
+    # to test
     def sample_passengers(self, n) -> pd.DataFrame:
         return self.df.sample(n)
-    
-    def filter_by_floor(self, floor: Floor) -> pd.DataFrame:
+
+    def filter_by_floor(self, floor: Floor):
         "filters passengers to those on a floor"
-        return self.df.loc[self.df.source_floor == floor.floor, :]
-    
+        return PassengerList(self.df.loc[self.df.current == floor.floor, :])
+
     def passenger_request_scan(self) -> pd.DataFrame:
         "scan the floor for all passenger requests"
-        return self.df.loc[:,['source_floor', 'dir']].drop_duplicates()
+        return self.df.loc[:,['source', 'dir']].drop_duplicates()
 
 PASSENGERS = PassengerList()

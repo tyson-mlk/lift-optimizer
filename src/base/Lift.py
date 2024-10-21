@@ -13,6 +13,7 @@ class Lift:
         self.floor = floor
         self.dir = dir
         self.capacity = capacity
+        self.passenger_count = 0
         self.passengers: PassengerList = PassengerList()
         self.calculate_passenger_count()
 
@@ -23,24 +24,22 @@ class Lift:
         return FLOOR_LIST.get_floor(self.floor)
 
     def get_current_floor_passengers(self):
-        return PASSENGERS.filter_by_floor(self.get_current_floor())
+        return self.get_current_floor().passengers
 
     def get_current_floor_passenger_count(self) -> int:
         return self.get_current_floor().get_floor_count()
 
-    # untested
     def has_capacity(self):
-        floor_count = self.get_current_floor_pc().get_floor_count()
-        return self.passenger_count + floor_count >= self.capacity
+        floor_count = self.get_current_floor().get_floor_count()
+        return self.passenger_count + floor_count <= self.capacity
 
-    # untested
     def onboard_all(self):
-        floor = self.get_current_floor_pc()
-        floor.onboard_all()
+        floor = self.get_current_floor()
         self.passengers.bulk_add_passengers(floor.passengers)
+        floor.onboard_all()
         self.calculate_passenger_count()
-        
-    # untested
+
+    # to test
     def onboard_selected(self, floor: Floor):
         if self.has_capacity():
             selection = floor.passengers.df
@@ -51,10 +50,12 @@ class Lift:
         self.passengers.bulk_add_passengers(passenger_list)
         self.calculate_passenger_count()
 
-    def alight(self):
-        self.passengers.remove_passengers()
+    def offboard(self, passengers: PassengerList = None):
         # TODO: to log arrival times of passengers
+        self.passengers.remove_passengers(passengers)
+        self.calculate_passenger_count()
 
+    # to test
     def move(self, floor):
         if floor == MIN_FLOOR:
             self.dir = 'U'

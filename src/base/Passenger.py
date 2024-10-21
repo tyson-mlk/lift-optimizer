@@ -5,6 +5,7 @@ class Passenger:
     def __init__(self, source, target, trip_start_time = datetime.now()):
         self.id = uuid.uuid1()
         self.source = source
+        self.current = source
         self.target = target
         self.dir = self.calculate_direction()
         self.trip_start = trip_start_time
