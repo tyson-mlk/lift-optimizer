@@ -6,7 +6,6 @@ from base.Floor import Floor
 
 class PassengerList:
     schema = {
-        'id': str,
         'source': str,
         'current': str,
         'target': str,
@@ -20,6 +19,7 @@ class PassengerList:
         if passenger_list_df is not None:
             self.df: pd.DataFrameType = pd.DataFrame(
                 passenger_list_df,
+                index=passenger_list_df.index,
                 columns=PassengerList.schema
             ).astype(
                 PassengerList.schema
@@ -36,7 +36,6 @@ class PassengerList:
         return pd.DataFrame(
             [
                 [
-                    passenger.id,
                     passenger.source,
                     passenger.current,
                     passenger.target,
@@ -50,7 +49,8 @@ class PassengerList:
                         else None
                 ]
             ],
-            columns=PassengerList.schema
+            columns=PassengerList.schema,
+            index=[passenger.id],
         ).astype(
             PassengerList.schema
         )
@@ -59,14 +59,13 @@ class PassengerList:
         return self.df.shape[0]
 
     def bulk_add_passengers(self, passengers):
-        print(passengers.df.shape)
         self.df = pd.concat([
             self.df,
             passengers.df
-        ])
+        ], axis=0)
 
     def remove_passengers(self, passengers = None):
-        if passengers == None:
+        if passengers is None:
             self.df = self.df.loc[[],:]
         else:
             self.complement_passenger_list(passengers)
@@ -83,7 +82,6 @@ class PassengerList:
         floor = FLOOR_LIST.get_floor(passenger.source)
         floor.passengers.add_passenger_list(passenger_df)
 
-    # to test
     def complement_passenger_list(self, passenger_list):
         self.df = self.df.loc[
             self.df.index.difference(passenger_list.df.index), :
