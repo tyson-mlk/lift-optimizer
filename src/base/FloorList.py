@@ -18,7 +18,7 @@ class FloorList:
 
 FLOOR_LIST = FloorList()
 FLOORS = list(str(i).zfill(3) for i in range(20))
-FLOOR_HEIGHTS = {i:float(i) for i in FLOORS}
+FLOOR_HEIGHTS = {i:float(2+int(i)*3) if i != '000' else 0.0 for i in FLOORS}
 MIN_FLOOR = min(FLOORS)
 MAX_FLOOR = max(FLOORS)
 for floor in FLOORS:

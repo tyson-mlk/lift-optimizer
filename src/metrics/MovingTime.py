@@ -1,37 +1,35 @@
 from math import sqrt
 
-import pandas as pd
-
 
 class MovingTime:
     
-    def __init__(self, a, max_v, floor_heights: dict[str, float]) -> None:
-        self.floor_heights = floor_heights
-        num_floors = len(floor_heights)
+    def __init__(self, a: float = 1.0, max_v: float = 4.0,
+                 overhead: float = 2.0, model: str = "accel") -> None:
         self.a = a
         self.max_v = max_v
-        self.time_mat = pd.DataFrame(
-            [[None] * num_floors] * num_floors,
-            columns = floor_heights.keys(),
-            index = floor_heights.keys()
-        )
-        self.calc_model = None
+        self.overhead = overhead
+        if model == "accel":
+            self.calc_model = \
+            lambda dist: MovingTime.accel_model_time(
+                self.a, self.max_v, dist
+            )
+        elif model == "unif":
+            self.calc_model = \
+            lambda dist: MovingTime.uniform_model_time(
+                self.overhead, self.max_v, dist
+            )
 
-    def accel_model_time(self, dist: float) -> float:
-        accel_dist = self.max_v ** 2 / self.a
+    @classmethod
+    def accel_model_time(cls, a, max_v, dist: float) -> float:
+        accel_dist = max_v ** 2 / a
         if dist < accel_dist:
-            return 2 * sqrt(dist/self.a)
+            return 2 * sqrt(dist/a)
         else:
-            accel_time = 2 * self.max_v / self.a
+            accel_time = 2 * max_v / a
             max_speed_dist = dist - accel_dist
-            return accel_time + max_speed_dist / self.max_v
+            return accel_time + max_speed_dist / max_v
 
-    def calc_accel_model(self) -> pd.DataFrame:
-        self.calc_model = "accel"
-        for f1 in self.floor_heights.keys():
-            for f2 in self.floor_heights.keys():
-                if f1 == f2:
-                    continue
-                self.floor_heights[f1, f2] = self.accel_model_time(
-                    abs(self.floor_heights[f1] - self.floor_heights[f2])
-                )
+    @classmethod
+    def uniform_model_time(cls, overhead, max_v, dist: float) -> float:
+        move_time = dist / max_v
+        return overhead + move_time

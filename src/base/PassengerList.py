@@ -66,11 +66,16 @@ class PassengerList:
             passengers.df
         ], axis=0)
 
-    def remove_passengers(self, passengers = None):
-        if passengers is None:
-            self.df = self.df.loc[[],:]
-        else:
-            self.complement_passenger_list(passengers)
+    def remove_all_passengers(self):
+        self.df.loc[:, 'lift'] = 'Arrived'
+        self.df = self.df.loc[[],:]
+
+    def remove_passengers(self, passengers):
+        self.update_arrival(passengers)
+        self.complement_passenger_list(passengers)
+
+    def update_arrival(self, passengers):
+        self.df.loc[passengers.df.index, 'lift'] = 'Arrived'
 
     def add_passenger_list(self, passenger_df: pd.DataFrame):
         self.df = pd.concat([self.df, passenger_df])
@@ -95,6 +100,10 @@ class PassengerList:
     def filter_by_floor(self, floor: Floor):
         "filters passengers to those on a floor"
         return PassengerList(self.df.loc[self.df.current == floor.floor, :])
+
+    def filter_by_destination(self, floor: Floor):
+        "filters passengers to those on a floor"
+        return PassengerList(self.df.loc[self.df.target == floor.floor, :])
     
     def assign_lift(self, lift):
         from base.Lift import Lift
@@ -115,6 +124,12 @@ class PassengerList:
         assert type(lift) is Lift
         assert type(passenger_list) is PassengerList
         self.df.loc[passenger_list.df.index, 'lift'] = lift.name
+
+    def update_passenger_floor(self, floor):
+        self.df.loc[:, 'current'] = floor.floor
+
+    def update_lift_passenger_floor(self, lift, floor):
+        self.df.loc[self.df.lift==lift.name, 'current'] = floor.floor
 
     def passenger_request_scan(self) -> pd.DataFrame:
         "scan the floor for all passenger requests"

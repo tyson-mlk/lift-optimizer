@@ -22,7 +22,7 @@ class Floor:
         return self.passengers.count_passengers()
 
     def reset_passenger_counter(self):
-        self.passengers.remove_passengers()
+        self.passengers.remove_all_passengers()
 
     def onboard_all(self):
         self.reset_passenger_counter()
@@ -35,5 +35,6 @@ class Floor:
     def random_select_passengers(self, capacity, passenger_count):
         return self.passengers.sample_passengers(n=capacity-passenger_count)
     
-    def select_passengers_by_earliest_arrival(self):
-        pass
+    def select_passengers_by_earliest_arrival(self, capacity, passenger_count):
+        num_to_board = capacity - passenger_count
+        return self.passengers.df.sort_values('trip_start_time').head(num_to_board)

@@ -1,6 +1,9 @@
+import asyncio
+
 from base.Floor import Floor
 from base.PassengerList import PassengerList, PASSENGERS
 from base.FloorList import FLOOR_LIST, MAX_FLOOR, MIN_FLOOR, FLOOR_HEIGHTS
+from metrics.MovingTime import MovingTime
 # from Passenger import Passenger
 
 LIFT_CAPACITY_DEFAULT = 12
@@ -8,7 +11,7 @@ LIFT_CAPACITY_DEFAULT = 12
 class Lift:
     "lift class"
 
-    def __init__(self, name, floor, dir, capacity = LIFT_CAPACITY_DEFAULT) -> None:
+    def __init__(self, name, floor, dir, capacity = LIFT_CAPACITY_DEFAULT, model = "accel") -> None:
         self.name = name
         self.floor = floor
         self.dir = dir
@@ -41,7 +44,7 @@ class Lift:
         floor.onboard_all()
         self.calculate_passenger_count()
 
-    def onboard_selected(self, floor: Floor):
+    def onboard_random_selection(self, floor: Floor):
         if self.has_capacity():
             selection = floor.passengers.df
         else:
@@ -53,32 +56,96 @@ class Lift:
         self.passengers.assign_lift(self)
         self.calculate_passenger_count()
 
-    def offboard(self, passengers: PassengerList = None):
+    def onboard_earliest_arrival(self, floor: Floor):
+        if self.has_capacity():
+            selection = floor.passengers.df
+        else:
+            selection = floor.select_passengers_by_earliest_arrival(self.capacity, self.passenger_count)
+        passenger_list = PassengerList(selection)
+        PASSENGERS.assign_lift_for_selection(self, passenger_list)
+        floor.onboard_selected(passenger_list)
+        self.passengers.bulk_add_passengers(passenger_list)
+        self.passengers.assign_lift(self)
+        self.calculate_passenger_count()
+
+    def offboard_all(self):
+        # TODO: to log arrival times of passengers
+        PASSENGERS.update_arrival(self.passengers)
+        self.passengers.remove_all_passengers()
+        self.calculate_passenger_count()
+
+    def offboard_arrived(self):
+        # TODO: to log arrival times of passengers
+        current_floor = FLOOR_LIST.get_floor(self.floor)
+        to_offboard = self.passengers.filter_by_destination(current_floor)
+        self.passengers.remove_passengers(to_offboard)
+        self.calculate_passenger_count()
+        PASSENGERS.update_arrival(to_offboard)
+
+    # to init test
+    def offboard(self, passengers: PassengerList):
         # TODO: to log arrival times of passengers
         self.passengers.remove_passengers(passengers)
         self.calculate_passenger_count()
+        PASSENGERS.update_arrival(passengers)
+        
+    # async def move(self, floor):
+    #     "moves to floor, assumes it is on a stopped state"
+    #     current_floor = FLOOR_LIST.get_floor(self.floor)
+    #     time_to_move = self.calc_time_to_move(current_floor, floor)
+    #     print('time to move is', time_to_move)
+    #     if floor.floor > self.floor:
+    #         self.dir = 'U'
+    #     elif floor.floor < self.floor:
+    #         self.dir = 'D'
+    #     else:
+    #         self.dir = 'S'
 
-    # to test
+    #     await asyncio.sleep(time_to_move)
+
+    #     if floor.floor == MIN_FLOOR:
+    #         self.dir = 'U'
+    #     elif floor.floor == MAX_FLOOR:
+    #         self.dir = 'D'
+        
+    #     self.floor = floor.floor
+    #     self.passengers.update_passenger_floor(floor)
+    #     PASSENGERS.update_lift_passenger_floor(self, floor)
+
+        
     def move(self, floor):
-        if floor == MIN_FLOOR:
+        "moves to floor, assumes it is on a stopped state"
+        current_floor = FLOOR_LIST.get_floor(self.floor)
+        time_to_move = self.calc_time_to_move(current_floor, floor)
+        print('time to move is', time_to_move)
+        if floor.floor > self.floor:
             self.dir = 'U'
-        elif floor == MAX_FLOOR:
+        elif floor.floor < self.floor:
             self.dir = 'D'
         else:
-            if floor > self.floor:
-                self.dir = 'U'
-            elif floor < self.floor:
-                self.dir = 'D'
-            else:
-                self.dir = 'S'
-        
-        self.floor = floor
+            self.dir = 'S'
 
-    def time_to_move(self, new_floor, old_floor, distance_lookup):
+        import time
+        time.sleep(time_to_move)
+
+        if floor.floor == MIN_FLOOR:
+            self.dir = 'U'
+        elif floor.floor == MAX_FLOOR:
+            self.dir = 'D'
+        
+        self.floor = floor.floor
+        self.passengers.update_passenger_floor(floor)
+        PASSENGERS.update_lift_passenger_floor(self, floor)
+
+
+    def calc_time_to_move(self, old_floor, new_floor):
         "distance lookup function takes into account time for acceleration and deceleration"
-        new_height = FLOOR_HEIGHTS[new_floor]
-        old_height = FLOOR_HEIGHTS[old_floor]
-        return distance_lookup( abs( new_height - old_height))
+        from metrics.MovingTime import MovingTime
+
+        new_height = new_floor.height
+        old_height = old_floor.height
+        distance = abs( new_height - old_height)
+        return MovingTime().calc_model(distance)
     
     def next_lift_passenger_target(self):
         passenger_targets = self.passengers.passenger_request_scan()
