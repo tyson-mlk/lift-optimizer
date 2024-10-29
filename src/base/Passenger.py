@@ -11,15 +11,6 @@ class Passenger:
         self.trip_start = trip_start_time
         self.lift = None
         # self.measurement = None
-    
-    @property
-    def lift(self):
-        return self._lift
-
-    @lift.setter
-    def lift(self, new_lift):
-        if new_lift is not None and new_lift.has_capacity():
-            self._lift = new_lift
 
     def calculate_direction(self):
         if self.target > self.source:

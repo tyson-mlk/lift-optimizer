@@ -8,8 +8,8 @@ LIFT_CAPACITY_DEFAULT = 12
 class Lift:
     "lift class"
 
-    def __init__(self, floor, dir, capacity = LIFT_CAPACITY_DEFAULT) -> None:
-
+    def __init__(self, name, floor, dir, capacity = LIFT_CAPACITY_DEFAULT) -> None:
+        self.name = name
         self.floor = floor
         self.dir = dir
         self.capacity = capacity
@@ -35,19 +35,22 @@ class Lift:
 
     def onboard_all(self):
         floor = self.get_current_floor()
+        PASSENGERS.assign_lift_for_floor(self, floor)
         self.passengers.bulk_add_passengers(floor.passengers)
+        self.passengers.assign_lift(self)
         floor.onboard_all()
         self.calculate_passenger_count()
 
-    # to test
     def onboard_selected(self, floor: Floor):
         if self.has_capacity():
             selection = floor.passengers.df
         else:
-            selection = floor.random_select_passengers(self, self.capacity, self.passenger_count)
+            selection = floor.random_select_passengers(self.capacity, self.passenger_count)
         passenger_list = PassengerList(selection)
+        PASSENGERS.assign_lift_for_selection(self, passenger_list)
         floor.onboard_selected(passenger_list)
         self.passengers.bulk_add_passengers(passenger_list)
+        self.passengers.assign_lift(self)
         self.calculate_passenger_count()
 
     def offboard(self, passengers: PassengerList = None):
