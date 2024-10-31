@@ -13,10 +13,6 @@ class Floor:
     @floor.setter
     def floor(self, new_floor):
         self._floor = new_floor
-
-    # @property
-    # def passenger_target_counter(self):
-    #     return self._passenger_target_counter
     
     def get_floor_count(self):
         return self.passengers.count_passengers()

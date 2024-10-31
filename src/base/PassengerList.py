@@ -1,5 +1,4 @@
 import pandas as pd
-from datetime import datetime
 
 from base.Passenger import Passenger
 from base.Floor import Floor

@@ -1,11 +1,13 @@
 # usage example
 # start from src/ folder
 import base
+from datetime import datetime
 
 p_list = base.PassengerList.PASSENGERS
-p_list.passenger_arrival(base.Passenger.Passenger('000', '010'))
-p_list.passenger_arrival(base.Passenger.Passenger('000', '002'))
-p_list.passenger_arrival(base.Passenger.Passenger('010', '000'))
+p_list.passenger_arrival(base.Passenger.Passenger('000', '010', datetime.now()))
+p_list.passenger_arrival(base.Passenger.Passenger('000', '002', datetime.now()))
+p_list.passenger_arrival(base.Passenger.Passenger('010', '000', datetime.now()))
+
 
 ground = base.FloorList.FLOOR_LIST.get_floor('000')
 first = base.FloorList.FLOOR_LIST.get_floor('001')
@@ -16,6 +18,9 @@ pa0 = ground.passengers
 pa10 = tenth.passengers
 
 l1 = base.Lift.Lift('l1', '000', 'U')
+
+p_list.df
+l1.passengers.df
 
 ground.random_select_passengers(1,0)
 
