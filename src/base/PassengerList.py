@@ -130,8 +130,12 @@ class PassengerList:
     def update_lift_passenger_floor(self, lift, floor):
         self.df.loc[self.df.lift==lift.name, 'current'] = floor.floor
 
-    def passenger_request_scan(self) -> pd.DataFrame:
-        "scan the floor for all passenger requests"
+    def passenger_target_scan(self) -> pd.DataFrame:
+        "scan for all passenger target destination"
+        return self.df.loc[:,['target', 'dir']].drop_duplicates()
+
+    def passenger_source_scan(self) -> pd.DataFrame:
+        "scan for all passenger source floors"
         return self.df.loc[:,['source', 'dir']].drop_duplicates()
 
 PASSENGERS = PassengerList()

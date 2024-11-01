@@ -1,9 +1,9 @@
 import asyncio
+import pandas as pd
 
 from base.Floor import Floor
 from base.PassengerList import PassengerList, PASSENGERS
 from base.FloorList import FLOOR_LIST, MAX_FLOOR, MIN_FLOOR
-# from Passenger import Passenger
 
 LIFT_CAPACITY_DEFAULT = 12
 
@@ -43,7 +43,8 @@ class Lift:
         floor.onboard_all()
         self.calculate_passenger_count()
 
-    def onboard_random_selection(self, floor: Floor):
+    def onboard_random_available(self):
+        floor = FLOOR_LIST.get_floor(self.floor)
         if self.has_capacity():
             selection = floor.passengers.df
         else:
@@ -55,7 +56,8 @@ class Lift:
         self.passengers.assign_lift(self)
         self.calculate_passenger_count()
 
-    def onboard_earliest_arrival(self, floor: Floor):
+    def onboard_earliest_arrival(self):
+        floor = FLOOR_LIST.get_floor(self.floor)
         if self.has_capacity():
             selection = floor.passengers.df
         else:
@@ -81,13 +83,6 @@ class Lift:
         self.calculate_passenger_count()
         PASSENGERS.update_arrival(to_offboard)
 
-    # to init test
-    def offboard(self, passengers: PassengerList):
-        # TODO: to log arrival times of passengers
-        self.passengers.remove_passengers(passengers)
-        self.calculate_passenger_count()
-        PASSENGERS.update_arrival(passengers)
-        
     # async def move(self, floor):
     #     "moves to floor, assumes it is on a stopped state"
     #     current_floor = FLOOR_LIST.get_floor(self.floor)
@@ -147,73 +142,60 @@ class Lift:
         return MovingTime().calc_model(distance)
     
     def next_lift_passenger_target(self):
-        passenger_targets = self.passengers.passenger_request_scan()
-        if passenger_targets.shape[0] == 0:
-            return None
-        if self.dir == 'U':
-            floor_scan = passenger_targets.loc[
-                (passenger_targets.source_floor > self.floor) &
-                (passenger_targets.dir == 'U'), :
-            ]
-            if floor_scan.shape[0] > 0:
-                return floor_scan.source_floor.min()
-            floor_scan = passenger_targets.loc[
-                (passenger_targets.dir == 'D'), :
-            ]
-            if floor_scan.shape[0] > 0:
-                return floor_scan.source_floor.max()
-            return passenger_targets.source_floor.min()
-        elif self.dir == 'D':
-            floor_scan = passenger_targets.loc[
-                (passenger_targets.source_floor < self.floor) &
-                (passenger_targets.dir == 'D'), :
-            ]
-            if floor_scan.shape[0] > 0:
-                return floor_scan.source_floor.min()
-            floor_scan = passenger_targets.loc[
-                (passenger_targets.dir == 'U'), :
-            ]
-            if floor_scan.shape[0] > 0:
-                return floor_scan.source_floor.min()
-            return passenger_targets.source_floor.max()
+        """
+        next lift target by passengers in the lift
+        this is a minimum constraint for lift service contract
+        """
+        passenger_targets = self.passengers.passenger_target_scan().rename(
+            columns={'target': 'lift_target'}
+        )
+        return self.find_next_lift_target(passenger_targets)
     
-    def next_overall_target_baseline(self):
-        target = PassengerList()
-        target.bulk_add_passengers(self.passengers)
-        target.bulk_add_passengers(PASSENGERS)
-        overall_targets = target.passenger_request_scan()
-        if overall_targets.shape[0] == 0:
+    def next_baseline_target(self):
+        """
+        baseline for lift target algorithm
+        attends to the most immediate request
+        """
+        lift_targets = self.passengers.passenger_target_scan().rename(
+            columns={'target': 'lift_target'}
+        )
+        passengers_in_wait = PassengerList(PASSENGERS.df.loc[PASSENGERS.df.lift == 'Unassigned', :])
+        waiting_targets = passengers_in_wait.passenger_source_scan().rename(
+            columns={'source': 'lift_target'}
+        )
+        overall_targets = pd.concat([lift_targets, waiting_targets])
+        return self.find_next_lift_target(overall_targets)
+        
+    def find_next_lift_target(self, targets):
+        if targets.shape[0] == 0:
             return None
         if self.dir == 'U':
-            floor_scan = overall_targets.loc[
-                (overall_targets.source_floor > self.floor) &
-                (overall_targets.dir == 'U'), :
+            floor_scan = targets.loc[
+                (targets.lift_target > self.floor) &
+                (targets.dir == 'U'), :
             ]
             if floor_scan.shape[0] > 0:
-                return floor_scan.source_floor.min()
-            floor_scan = overall_targets.loc[
-                (overall_targets.dir == 'D'), :
+                return floor_scan.lift_target.min()
+
+            floor_scan = targets.loc[
+                (targets.dir == 'D'), :
             ]
             if floor_scan.shape[0] > 0:
-                return floor_scan.source_floor.max()
-            return overall_targets.source_floor.min()
+                return floor_scan.lift_target.max()
+
+            return targets.lift_target.min()
         elif self.dir == 'D':
-            floor_scan = overall_targets.loc[
-                (overall_targets.source_floor < self.floor) &
-                (overall_targets.dir == 'D'), :
+            floor_scan = targets.loc[
+                (targets.lift_target < self.floor) &
+                (targets.dir == 'D'), :
             ]
             if floor_scan.shape[0] > 0:
-                return floor_scan.source_floor.min()
-            floor_scan = overall_targets.loc[
-                (overall_targets.dir == 'U'), :
+                return floor_scan.lift_target.min()
+
+            floor_scan = targets.loc[
+                (targets.dir == 'U'), :
             ]
             if floor_scan.shape[0] > 0:
-                return floor_scan.source_floor.min()
-            return overall_targets.source_floor.max()
+                return floor_scan.lift_target.min()
 
-
-    # TODO: move function to main control    
-    # def stop(self, floor):
-    #     self.alight(floor)
-    #     eligible_floors = master.get_eligible_floors(floor)
-    #     master.get_floor_passengers(floor).board(eligible_floors, self)
+            return targets.lift_target.max()

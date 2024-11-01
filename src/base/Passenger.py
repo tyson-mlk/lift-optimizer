@@ -9,7 +9,7 @@ class Passenger:
         self.target = target
         self.dir = self.calculate_direction()
         self.trip_start = trip_start_time
-        self.lift = None
+        self.lift = 'Unassigned'
         # self.measurement = None
 
     def calculate_direction(self):

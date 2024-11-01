@@ -6,4 +6,3 @@ import base.Lift
 
 # modules under consideration
 import base.PreBoardPassengers
-import base.ArrivedPassengers
