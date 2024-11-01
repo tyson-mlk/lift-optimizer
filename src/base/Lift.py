@@ -51,6 +51,15 @@ class Lift:
         else:
             selection = floor.random_select_passengers(self.capacity, self.passenger_count)
         passenger_list = PassengerList(selection)
+
+        import time
+        from metrics.BoardingTime import BoardingTime
+
+        num_to_onboard = passenger_list.count_passengers()
+        time_to_onboard = BoardingTime(self, self.passenger_count, 0, num_to_onboard).calc_boarding_time()
+        print(f'onboarding {num_to_onboard} passengers takes {time_to_onboard} s')
+        time.sleep(time_to_onboard)
+
         PASSENGERS.assign_lift_for_selection(self, passenger_list)
         PASSENGERS.update_boarding_time(passenger_list)
         floor.onboard_selected(passenger_list)
@@ -65,6 +74,15 @@ class Lift:
         else:
             selection = floor.select_passengers_by_earliest_arrival(self.capacity, self.passenger_count)
         passenger_list = PassengerList(selection)
+
+        import time
+        from metrics.BoardingTime import BoardingTime
+
+        num_to_onboard = passenger_list.count_passengers()
+        time_to_onboard = BoardingTime(self, self.passenger_count, 0, num_to_onboard).calc_boarding_time()
+        print(f'onboarding {num_to_onboard} passengers takes {time_to_onboard} s')
+        time.sleep(time_to_onboard)
+
         PASSENGERS.assign_lift_for_selection(self, passenger_list)
         PASSENGERS.update_boarding_time(passenger_list)
         floor.onboard_selected(passenger_list)
@@ -75,6 +93,15 @@ class Lift:
     def offboard_all(self):
         # TODO: to log arrival times of passengers
         PASSENGERS.update_arrival(self.passengers)
+
+        import time
+        from metrics.BoardingTime import BoardingTime
+
+        num_to_offboard = self.passenger_count
+        time_to_offboard = BoardingTime(self, num_to_offboard, num_to_offboard, 0).calc_boarding_time()
+        print(f'offboarding {num_to_offboard} passengers takes {time_to_offboard} s')
+        time.sleep(time_to_offboard)
+
         self.passengers.remove_all_passengers()
         self.calculate_passenger_count()
 
@@ -82,6 +109,15 @@ class Lift:
         # TODO: to log arrival times of passengers
         current_floor = FLOOR_LIST.get_floor(self.floor)
         to_offboard = self.passengers.filter_by_destination(current_floor)
+
+        import time
+        from metrics.BoardingTime import BoardingTime
+
+        num_to_offboard = to_offboard.count_passengers()
+        time_to_offboard = BoardingTime(self, self.passenger_count, num_to_offboard, 0).calc_boarding_time()
+        print(f'offboarding {num_to_offboard} passengers takes {time_to_offboard} s')
+        time.sleep(time_to_offboard)
+
         self.passengers.remove_passengers(to_offboard)
         self.calculate_passenger_count()
         PASSENGERS.update_arrival(to_offboard)

@@ -19,10 +19,10 @@ class BoardingTime:
         return min(desired_cnt / self.capacity, 1.0)
 
     def calc_boarding_time(self) -> float:
-        off_board_congested = max(self.pre_board_cnt - 0.5 * self.capacity, 0.0)
-        off_board_uncongested = max(self.capacity * 0.5 - self.semi_cnt, 0.0)
-        on_board_uncongested = max(self.capacity * 0.5 - self.semi_cnt, 0.0)
-        on_board_congested = max(self.after_board_cnt - 0.5 * self.capacity, 0.0)
+        off_board_congested = min(max(self.pre_board_cnt - 0.5 * self.capacity, 0.0), self.pre_board_cnt - self.semi_cnt)
+        off_board_uncongested = min(max(self.capacity * 0.5 - self.semi_cnt, 0.0), self.pre_board_cnt - self.semi_cnt)
+        on_board_uncongested = min(max(self.capacity * 0.5 - self.semi_cnt, 0.0), self.after_board_cnt - self.semi_cnt)
+        on_board_congested = min(max(self.after_board_cnt - 0.5 * self.capacity, 0.0), self.after_board_cnt - self.semi_cnt)
 
         return (off_board_uncongested + on_board_uncongested) * 0.5 \
             + (off_board_congested + on_board_congested) * 1.5
