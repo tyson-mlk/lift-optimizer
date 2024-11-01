@@ -1,4 +1,5 @@
 import pandas as pd
+from datetime import datetime
 
 from base.Passenger import Passenger
 from base.Floor import Floor
@@ -12,7 +13,10 @@ class PassengerList:
         'lift': str,
         'trip_start_time': 'datetime64[ns]',
         'board_time': 'datetime64[ns]',
-        'dest_arrival_time': 'datetime64[ns]'
+        'dest_arrival_time': 'datetime64[ns]',
+        'travel_time': 'float64',
+        'waiting_time': 'float64',
+        'time_on_lift': 'float64'
     }
 
     def __init__(self, passenger_list_df = None):
@@ -47,7 +51,16 @@ class PassengerList:
                         else None,
                     passenger.dest_arrival_time
                         if 'dest_arrival_time' in passenger.__dict__.keys()
-                        else None
+                        else None,
+                    passenger.travel_time
+                        if 'travel_time' in passenger.__dict__.keys()
+                        else -1,
+                    passenger.waiting_time
+                        if 'travel_time' in passenger.__dict__.keys()
+                        else -1,
+                    passenger.time_on_lift
+                        if 'travel_time' in passenger.__dict__.keys()
+                        else -1
                 ]
             ],
             columns=PassengerList.schema,
@@ -66,15 +79,17 @@ class PassengerList:
         ], axis=0)
 
     def remove_all_passengers(self):
-        self.df.loc[:, 'lift'] = 'Arrived'
         self.df = self.df.loc[[],:]
 
     def remove_passengers(self, passengers):
-        self.update_arrival(passengers)
         self.complement_passenger_list(passengers)
+
+    def update_boarding_time(self, passengers):
+        self.df.loc[passengers.df.index, 'board_time'] = datetime.now()
 
     def update_arrival(self, passengers):
         self.df.loc[passengers.df.index, 'lift'] = 'Arrived'
+        self.df.loc[passengers.df.index, 'dest_arrival_time'] = datetime.now()
 
     def add_passenger_list(self, passenger_df: pd.DataFrame):
         self.df = pd.concat([self.df, passenger_df])
@@ -137,5 +152,10 @@ class PassengerList:
     def passenger_source_scan(self) -> pd.DataFrame:
         "scan for all passenger source floors"
         return self.df.loc[:,['source', 'dir']].drop_duplicates()
+    
+    def update_passenger_metrics(self):
+        from metrics.TimeMetrics import calculate_all_metrics
+
+        self.df = calculate_all_metrics(self).df
 
 PASSENGERS = PassengerList()

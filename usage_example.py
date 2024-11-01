@@ -89,7 +89,8 @@ l1.onboard_random_available()
 
 print('I',  l1.floor, l1.passengers.df) # Floor 5
 
-
+p_list.update_passenger_metrics()
+print(p_list.df)
 
 # p_list.df
 # l1.passengers.df

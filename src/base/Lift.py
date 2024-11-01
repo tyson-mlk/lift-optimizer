@@ -38,6 +38,7 @@ class Lift:
     def onboard_all(self):
         floor = self.get_current_floor()
         PASSENGERS.assign_lift_for_floor(self, floor)
+        PASSENGERS.update_boarding_time(PASSENGERS.filter_by_floor(floor))
         self.passengers.bulk_add_passengers(floor.passengers)
         self.passengers.assign_lift(self)
         floor.onboard_all()
@@ -51,6 +52,7 @@ class Lift:
             selection = floor.random_select_passengers(self.capacity, self.passenger_count)
         passenger_list = PassengerList(selection)
         PASSENGERS.assign_lift_for_selection(self, passenger_list)
+        PASSENGERS.update_boarding_time(passenger_list)
         floor.onboard_selected(passenger_list)
         self.passengers.bulk_add_passengers(passenger_list)
         self.passengers.assign_lift(self)
@@ -64,6 +66,7 @@ class Lift:
             selection = floor.select_passengers_by_earliest_arrival(self.capacity, self.passenger_count)
         passenger_list = PassengerList(selection)
         PASSENGERS.assign_lift_for_selection(self, passenger_list)
+        PASSENGERS.update_boarding_time(passenger_list)
         floor.onboard_selected(passenger_list)
         self.passengers.bulk_add_passengers(passenger_list)
         self.passengers.assign_lift(self)
