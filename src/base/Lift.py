@@ -38,7 +38,7 @@ class Lift:
     def onboard_all(self):
         floor = self.get_current_floor()
         PASSENGERS.assign_lift_for_floor(self, floor)
-        PASSENGERS.update_boarding_time(PASSENGERS.filter_by_floor(floor))
+        PASSENGERS.board(PASSENGERS.filter_by_floor(floor))
 
         import time
         from metrics.BoardingTime import boarding_time
@@ -51,6 +51,7 @@ class Lift:
 
         self.passengers.bulk_add_passengers(floor.passengers)
         self.passengers.assign_lift(self)
+        self.passengers.board(floor.passengers)
         floor.onboard_all()
         self.calculate_passenger_count()
 
@@ -72,10 +73,11 @@ class Lift:
             time.sleep(time_to_onboard)
 
         PASSENGERS.assign_lift_for_selection(self, passenger_list)
-        PASSENGERS.update_boarding_time(passenger_list)
+        PASSENGERS.board(passenger_list)
         floor.onboard_selected(passenger_list)
         self.passengers.bulk_add_passengers(passenger_list)
         self.passengers.assign_lift(self)
+        self.passengers.board(passenger_list)
         self.calculate_passenger_count()
 
     def onboard_earliest_arrival(self):
@@ -96,10 +98,11 @@ class Lift:
             time.sleep(time_to_onboard)
 
         PASSENGERS.assign_lift_for_selection(self, passenger_list)
-        PASSENGERS.update_boarding_time(passenger_list)
+        PASSENGERS.board(passenger_list)
         floor.onboard_selected(passenger_list)
         self.passengers.bulk_add_passengers(passenger_list)
         self.passengers.assign_lift(self)
+        self.passengers.board(passenger_list)
         self.calculate_passenger_count()
 
     def offboard_all(self):

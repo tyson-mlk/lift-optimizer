@@ -9,8 +9,8 @@ class Passenger:
         self.target = target
         self.dir = self.calculate_direction()
         self.trip_start = trip_start_time
+        self.status = 'Waiting'
         self.lift = 'Unassigned'
-        # self.measurement = None
 
     def calculate_direction(self):
         if self.target > self.source:
@@ -19,12 +19,3 @@ class Passenger:
             return 'D'
         else:
             raise ValueError('problem calculating passenger direction')
-
-    # def start_journey(self, start_time):
-    #     self.measurement = PassengerMetric(start_time)
-
-    # def update_lift_arrival(self, board_time):
-    #     self.measurement.update_lift_arrival(board_time)
-
-    # def update_dest_arrival(self, arrival_time):
-    #     self.measurement.update_dest_arrival(arrival_time)

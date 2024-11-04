@@ -19,75 +19,83 @@ pa10 = tenth.passengers
 
 l1 = base.Lift.Lift('l1', '000', 'U')
 
-print('A', l1.name, l1.passengers.df) # Floor 0
+print('A', l1.name, l1.passengers.df, p_list.df) # Floor 0
 
 l1.offboard_arrived()
-l1.onboard_random_available()
+# l1.onboard_random_available()
+l1.onboard_earliest_arrival()
 
-print('B', l1.name, l1.passengers.df) # Floor 0
+print('B', l1.name, l1.passengers.df, p_list.df) # Floor 0
 
 lift_target = f_list.get_floor(l1.next_baseline_target())
 l1.move(lift_target)
 
 l1.offboard_arrived()
-l1.onboard_random_available()
+# l1.onboard_random_available()
+l1.onboard_earliest_arrival()
 
 p_list.passenger_arrival(base.Passenger.Passenger('004', '000', datetime.now()))
 p_list.passenger_arrival(base.Passenger.Passenger('008', '010', datetime.now()))
 
-print('C', l1.name, l1.passengers.df) # Floor 2
+print('C', l1.name, l1.passengers.df, p_list.df) # Floor 2
 
 lift_target = f_list.get_floor(l1.next_baseline_target())
 l1.move(lift_target)
 
 l1.offboard_arrived()
-l1.onboard_random_available()
+# l1.onboard_random_available()
+l1.onboard_earliest_arrival()
 
-print('D',  l1.name, l1.passengers.df) # Floor 8
+print('D',  l1.name, l1.passengers.df, p_list.df) # Floor 8
 
 lift_target = f_list.get_floor(l1.next_baseline_target())
 l1.move(lift_target)
 
 l1.offboard_arrived()
-l1.onboard_random_available()
+# l1.onboard_random_available()
+l1.onboard_earliest_arrival()
 
 p_list.passenger_arrival(base.Passenger.Passenger('008', '011', datetime.now()))
 
-print('E',  l1.name, l1.passengers.df) # Floor 10
+print('E',  l1.name, l1.passengers.df, p_list.df) # Floor 10
 
 lift_target = f_list.get_floor(l1.next_baseline_target())
 l1.move(lift_target)
 
 l1.offboard_arrived()
-l1.onboard_random_available()
+# l1.onboard_random_available()
+l1.onboard_earliest_arrival()
 
 p_list.passenger_arrival(base.Passenger.Passenger('001', '005', datetime.now()))
 
-print('F',  l1.name, l1.passengers.df) # Floor 4
+print('F',  l1.name, l1.passengers.df, p_list.df) # Floor 4
 
 lift_target = f_list.get_floor(l1.next_baseline_target())
 l1.move(lift_target)
 
 l1.offboard_arrived()
-l1.onboard_random_available()
+# l1.onboard_random_available()
+l1.onboard_earliest_arrival()
 
-print('G',  l1.name, l1.passengers.df) # Floor 0
-
-lift_target = f_list.get_floor(l1.next_baseline_target())
-l1.move(lift_target)
-
-l1.offboard_arrived()
-l1.onboard_random_available()
-
-print('H',  l1.name, l1.passengers.df) # Floor 1
+print('G',  l1.name, l1.passengers.df, p_list.df) # Floor 0
 
 lift_target = f_list.get_floor(l1.next_baseline_target())
 l1.move(lift_target)
 
 l1.offboard_arrived()
-l1.onboard_random_available()
+# l1.onboard_random_available()
+l1.onboard_earliest_arrival()
 
-print('I',  l1.name, l1.passengers.df) # Floor 5
+print('H',  l1.name, l1.passengers.df, p_list.df) # Floor 1
+
+lift_target = f_list.get_floor(l1.next_baseline_target())
+l1.move(lift_target)
+
+l1.offboard_arrived()
+# l1.onboard_random_available()
+l1.onboard_earliest_arrival()
+
+print('I',  l1.name, l1.passengers.df, p_list.df) # Floor 5
 
 p_list.update_passenger_metrics()
 print(p_list.df)

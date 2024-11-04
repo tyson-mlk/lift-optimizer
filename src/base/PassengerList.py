@@ -10,6 +10,7 @@ class PassengerList:
         'current': str,
         'target': str,
         'dir': str,
+        'status': str,
         'lift': str,
         'trip_start_time': 'datetime64[ns]',
         'board_time': 'datetime64[ns]',
@@ -44,6 +45,7 @@ class PassengerList:
                     passenger.current,
                     passenger.target,
                     passenger.dir,
+                    passenger.status,
                     passenger.lift,
                     passenger.trip_start,
                     passenger.board_time
@@ -84,11 +86,15 @@ class PassengerList:
     def remove_passengers(self, passengers):
         self.complement_passenger_list(passengers)
 
+    def board(self, passengers):
+        self.df.loc[passengers.df.index, 'status'] = 'Onboard'
+        self.update_boarding_time(passengers)
+
     def update_boarding_time(self, passengers):
         self.df.loc[passengers.df.index, 'board_time'] = datetime.now()
 
     def update_arrival(self, passengers):
-        self.df.loc[passengers.df.index, 'lift'] = 'Arrived'
+        self.df.loc[passengers.df.index, 'status'] = 'Arrived'
         self.df.loc[passengers.df.index, 'dest_arrival_time'] = datetime.now()
 
     def add_passenger_list(self, passenger_df: pd.DataFrame):
