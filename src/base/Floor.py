@@ -1,18 +1,18 @@
 class Floor:
-    def __init__(self, floor, height) -> None:
-        self.floor = floor
+    def __init__(self, floorname, height) -> None:
+        self.name = floorname
         self.height = height
 
         from base.PassengerList import PassengerList
         self.passengers: PassengerList = PassengerList()
 
     @property
-    def floor(self):
-        return self._floor
+    def name(self):
+        return self._name
     
-    @floor.setter
-    def floor(self, new_floor):
-        self._floor = new_floor
+    @name.setter
+    def name(self, new_name):
+        self._name = new_name
     
     def get_floor_count(self):
         return self.passengers.count_passengers()

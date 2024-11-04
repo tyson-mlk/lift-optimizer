@@ -113,11 +113,11 @@ class PassengerList:
 
     def filter_by_floor(self, floor: Floor):
         "filters passengers to those on a floor"
-        return PassengerList(self.df.loc[self.df.current == floor.floor, :])
+        return PassengerList(self.df.loc[self.df.current == floor.name, :])
 
     def filter_by_destination(self, floor: Floor):
         "filters passengers to those on a floor"
-        return PassengerList(self.df.loc[self.df.target == floor.floor, :])
+        return PassengerList(self.df.loc[self.df.target == floor.name, :])
     
     def assign_lift(self, lift):
         from base.Lift import Lift
@@ -130,7 +130,7 @@ class PassengerList:
 
         assert type(lift) is Lift
         assert type(floor) is Floor
-        self.df.loc[self.df.source==floor.floor, 'lift'] = lift.name
+        self.df.loc[self.df.source==floor.name, 'lift'] = lift.name
     
     def assign_lift_for_selection(self, lift, passenger_list):
         from base.Lift import Lift
@@ -140,10 +140,10 @@ class PassengerList:
         self.df.loc[passenger_list.df.index, 'lift'] = lift.name
 
     def update_passenger_floor(self, floor):
-        self.df.loc[:, 'current'] = floor.floor
+        self.df.loc[:, 'current'] = floor.name
 
     def update_lift_passenger_floor(self, lift, floor):
-        self.df.loc[self.df.lift==lift.name, 'current'] = floor.floor
+        self.df.loc[self.df.lift==lift.name, 'current'] = floor.name
 
     def passenger_target_scan(self) -> pd.DataFrame:
         "scan for all passenger target destination"

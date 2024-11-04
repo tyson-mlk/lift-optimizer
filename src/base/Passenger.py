@@ -18,7 +18,7 @@ class Passenger:
         elif self.target < self.source:
             return 'D'
         else:
-            raise Exception('problem calculating passenger direction')
+            raise ValueError('problem calculating passenger direction')
 
     # def start_journey(self, start_time):
     #     self.measurement = PassengerMetric(start_time)

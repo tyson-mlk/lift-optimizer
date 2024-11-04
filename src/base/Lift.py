@@ -10,9 +10,9 @@ LIFT_CAPACITY_DEFAULT = 12
 class Lift:
     "lift class"
 
-    def __init__(self, name, floor, dir, capacity = LIFT_CAPACITY_DEFAULT, model = "accel") -> None:
+    def __init__(self, name, floorname, dir, capacity = LIFT_CAPACITY_DEFAULT, model = "accel") -> None:
         self.name = name
-        self.floor = floor
+        self.floor = floorname
         self.dir = dir
         self.capacity = capacity
         self.passenger_count = 0
@@ -39,6 +39,16 @@ class Lift:
         floor = self.get_current_floor()
         PASSENGERS.assign_lift_for_floor(self, floor)
         PASSENGERS.update_boarding_time(PASSENGERS.filter_by_floor(floor))
+
+        import time
+        from metrics.BoardingTime import boarding_time
+
+        num_to_onboard = floor.passengers.count_passengers()
+        time_to_onboard = boarding_time(self, self.passenger_count, 0, num_to_onboard)
+        if time_to_onboard > 0:
+            print(f'onboarding {num_to_onboard} passengers takes {time_to_onboard} s')
+            time.sleep(time_to_onboard)
+
         self.passengers.bulk_add_passengers(floor.passengers)
         self.passengers.assign_lift(self)
         floor.onboard_all()
@@ -53,12 +63,13 @@ class Lift:
         passenger_list = PassengerList(selection)
 
         import time
-        from metrics.BoardingTime import BoardingTime
+        from metrics.BoardingTime import boarding_time
 
         num_to_onboard = passenger_list.count_passengers()
-        time_to_onboard = BoardingTime(self, self.passenger_count, 0, num_to_onboard).calc_boarding_time()
-        print(f'onboarding {num_to_onboard} passengers takes {time_to_onboard} s')
-        time.sleep(time_to_onboard)
+        time_to_onboard = boarding_time(self, self.passenger_count, 0, num_to_onboard)
+        if time_to_onboard > 0:
+            print(f'onboarding {num_to_onboard} passengers takes {time_to_onboard} s')
+            time.sleep(time_to_onboard)
 
         PASSENGERS.assign_lift_for_selection(self, passenger_list)
         PASSENGERS.update_boarding_time(passenger_list)
@@ -76,12 +87,13 @@ class Lift:
         passenger_list = PassengerList(selection)
 
         import time
-        from metrics.BoardingTime import BoardingTime
+        from metrics.BoardingTime import boarding_time
 
         num_to_onboard = passenger_list.count_passengers()
-        time_to_onboard = BoardingTime(self, self.passenger_count, 0, num_to_onboard).calc_boarding_time()
-        print(f'onboarding {num_to_onboard} passengers takes {time_to_onboard} s')
-        time.sleep(time_to_onboard)
+        time_to_onboard = boarding_time(self, self.passenger_count, 0, num_to_onboard)
+        if time_to_onboard > 0:
+            print(f'onboarding {num_to_onboard} passengers takes {time_to_onboard} s')
+            time.sleep(time_to_onboard)
 
         PASSENGERS.assign_lift_for_selection(self, passenger_list)
         PASSENGERS.update_boarding_time(passenger_list)
@@ -95,12 +107,13 @@ class Lift:
         PASSENGERS.update_arrival(self.passengers)
 
         import time
-        from metrics.BoardingTime import BoardingTime
+        from metrics.BoardingTime import boarding_time
 
         num_to_offboard = self.passenger_count
-        time_to_offboard = BoardingTime(self, num_to_offboard, num_to_offboard, 0).calc_boarding_time()
-        print(f'offboarding {num_to_offboard} passengers takes {time_to_offboard} s')
-        time.sleep(time_to_offboard)
+        time_to_offboard = boarding_time(self, num_to_offboard, num_to_offboard, 0)
+        if time_to_offboard > 0:
+            print(f'offboarding {num_to_offboard} passengers takes {time_to_offboard} s')
+            time.sleep(time_to_offboard)
 
         self.passengers.remove_all_passengers()
         self.calculate_passenger_count()
@@ -111,12 +124,13 @@ class Lift:
         to_offboard = self.passengers.filter_by_destination(current_floor)
 
         import time
-        from metrics.BoardingTime import BoardingTime
+        from metrics.BoardingTime import boarding_time
 
         num_to_offboard = to_offboard.count_passengers()
-        time_to_offboard = BoardingTime(self, self.passenger_count, num_to_offboard, 0).calc_boarding_time()
-        print(f'offboarding {num_to_offboard} passengers takes {time_to_offboard} s')
-        time.sleep(time_to_offboard)
+        time_to_offboard = boarding_time(self, self.passenger_count, num_to_offboard, 0)
+        if time_to_offboard > 0:
+            print(f'offboarding {num_to_offboard} passengers takes {time_to_offboard} s')
+            time.sleep(time_to_offboard)
 
         self.passengers.remove_passengers(to_offboard)
         self.calculate_passenger_count()
@@ -151,9 +165,9 @@ class Lift:
         current_floor = FLOOR_LIST.get_floor(self.floor)
         time_to_move = self.calc_time_to_move(current_floor, floor)
         print('time to move is', time_to_move)
-        if floor.floor > self.floor:
+        if floor.name > self.floor:
             self.dir = 'U'
-        elif floor.floor < self.floor:
+        elif floor.name < self.floor:
             self.dir = 'D'
         else:
             self.dir = 'S'
@@ -161,12 +175,12 @@ class Lift:
         import time
         time.sleep(time_to_move)
 
-        if floor.floor == MIN_FLOOR:
+        if floor.name == MIN_FLOOR:
             self.dir = 'U'
-        elif floor.floor == MAX_FLOOR:
+        elif floor.name == MAX_FLOOR:
             self.dir = 'D'
         
-        self.floor = floor.floor
+        self.floor = floor.name
         self.passengers.update_passenger_floor(floor)
         PASSENGERS.update_lift_passenger_floor(self, floor)
 

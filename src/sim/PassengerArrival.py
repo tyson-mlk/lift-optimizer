@@ -9,11 +9,11 @@ from base.PassengerList import PASSENGERS
 FLOORS = list(str(i).zfill(3) for i in range(1, 5))
 FLOOR_HEIGHTS = {'001': 0, '002': 5, '003': 8, '004': 11}
 FLOOR_LIST = FloorList()
-for floor in FLOORS:
-    FLOOR_LIST.add_floor(Floor(floor, FLOOR_HEIGHTS[floor]))
+for floorname in FLOORS:
+    FLOOR_LIST.add_floor(Floor(floorname, FLOOR_HEIGHTS[floorname]))
 TRIPS = [(
-    source.floor, target.floor,
-    'U' if target.floor > source.floor else 'D'
+    source, target,
+    'U' if target > source else 'D'
     )
     for source in FLOOR_LIST.list_floors()
     for target in FLOOR_LIST.list_floors()
