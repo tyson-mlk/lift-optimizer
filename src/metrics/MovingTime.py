@@ -49,55 +49,87 @@ class MovingHeight:
         self.dir = 'U' if self.target_height > self.source_height else 'D'
         self.dist = abs(self.source_height - self.target_height)
         if model == 'accel':
+            self.accel_dist = self.max_v ** 2 / self.a
             self.time_to_max = self.max_v / self.a
             self.time_at_max = max( (self.dist - self.max_v ** 2 / self.a) / self.max_v, 0)
-            self.calc_height = lambda t: self.accel_model_height(t)
+            self.calc_state = lambda t: self.accel_model_status(t)
         elif model == 'unif':
-            self.calc_height = lambda t: self.uniform_model_height(t)
+            self.calc_state = lambda t: self.uniform_model_status(t)
 
-    def accel_model_height(self, time_elapsed):
-        if time_elapsed <= 0:
-            return self.source_height
-        
+    def accel_model_reaches_max(self):
         accel_dist = self.max_v ** 2 / self.a
-        if self.dist >= accel_dist:
-            if time_elapsed - self.time_to_max < 0:
-                dist_traveled = self.a * time_elapsed**2 / 2
-            elif time_elapsed - self.time_to_max - self.time_at_max < 0:
-                accel_dist = self.max_v ** 2 / self.a / 2
-                max_dist = self.max_v * (time_elapsed - self.time_to_max)
-                dist_traveled = accel_dist + max_dist
-            elif time_elapsed - self.time_to_max - self.time_at_max - self.time_to_max < 0:
-                accel_dist = self.max_v ** 2 / self.a / 2
-                max_dist = self.max_v * self.time_at_max
-                decel_time = time_elapsed - self.time_to_max - self.time_at_max
-                decel_dist = decel_time * (self.max_v - decel_time * self.a / 2)
-                dist_traveled = accel_dist + max_dist + decel_dist
-            else:
-                return self.target_height
-        else:
-            time_to_half = sqrt(self.dist/self.a)
-            if time_elapsed <= time_to_half:
-                dist_traveled = time_elapsed**2 * self.a / 2
-            else:
-                time_est_remaining = 2 * time_to_half - time_elapsed
-                if time_est_remaining < 0:
-                    time_est_remaining = 0
-                dist_traveled = self.dist - time_est_remaining**2 * self.a / 2
+        return self.dist >= accel_dist
     
+    def accel_model_distance_velocity_with_max(self, time_elapsed):
+        if time_elapsed <= 0:
+            return 0.0, self.dir, 0.0
+        elif time_elapsed - self.time_to_max < 0:
+            dist_traveled = self.a * time_elapsed**2 / 2
+            velocity = self.a * time_elapsed
+            return dist_traveled, self.dir, velocity
+        elif time_elapsed - self.time_to_max - self.time_at_max < 0:
+            self.accel_dist = self.max_v ** 2 / self.a / 2
+            max_dist = self.max_v * (time_elapsed - self.time_to_max)
+            dist_traveled = self.accel_dist + max_dist
+            return dist_traveled, self.dir, self.max_v
+        elif time_elapsed - self.time_to_max - self.time_at_max - self.time_to_max < 0:
+            self.accel_dist = self.max_v ** 2 / self.a / 2
+            max_dist = self.max_v * self.time_at_max
+            decel_time = time_elapsed - self.time_to_max - self.time_at_max
+            decel_dist = decel_time * (self.max_v - decel_time * self.a / 2)
+            velocity = self.max_v - decel_time * self.a
+            dist_traveled = self.accel_dist + max_dist + decel_dist
+            return dist_traveled, self.dir, velocity
+        else:
+            return self.dist, self.dir, 0.0
+        
+    def accel_model_distance_velocity_no_max(self, time_elapsed):
+        time_to_half = sqrt(self.dist/self.a)
+        if time_elapsed <= 0:
+            return 0.0, self.dir, 0.0
+        elif time_elapsed <= time_to_half:
+            dist_traveled = time_elapsed**2 * self.a / 2
+            velocity = time_elapsed * self.a
+            return dist_traveled, self.dir, velocity
+        else:
+            time_est_remaining = 2 * time_to_half - time_elapsed
+            if time_est_remaining < 0:
+                return self.dist, self.dir, 0.0
+            dist_traveled = self.dist - time_est_remaining**2 * self.a / 2
+            velocity = time_est_remaining * self.a
+            return dist_traveled, self.dir, velocity
+
+    def accel_model_status(self, time_elapsed):
+        if self.accel_model_reaches_max():
+            dist, d, v = self.accel_model_distance_velocity_with_max(time_elapsed)
+            return self.get_height(dist), d, v
+        else:
+            dist, d, v = self.accel_model_distance_velocity_no_max(time_elapsed)
+            return self.get_height(dist), d, v
+
+    def uniform_model_status(self, time_elapsed):
+        if time_elapsed < self.overhead / 2:
+            dist_traveled = 0
+            velocity = 0
+        else:
+            dist_traveled = (time_elapsed - self.overhead / 2) * self.max_v
+            velocity = self.max_v
+            if dist_traveled > self.dist:
+                dist_traveled = self.dist
+                velocity = 0
+    
+        return self.get_height(dist_traveled), self.dir, velocity
+
+    def get_height(self, dist_traveled):
         if self.dir == 'U':
             return self.source_height + dist_traveled
         else:
             return self.source_height - dist_traveled
-
-    def uniform_model_height(self, time_elapsed):
-        if time_elapsed < self.overhead / 2:
-            return self.source_height
-        dist_traveled = (time_elapsed - self.overhead / 2) * self.max_v
-        if dist_traveled > self.dist:
-            return self.target_height
+        
+    def print_status(self, height, direction, velocity):
+        height_str = f'Lift at {round(height, 2)}m '
+        if velocity > 0:
+            velocity_str = f'moving {direction} at {round(velocity, 2)}ms-1'
         else:
-            if self.dir == 'U':
-                return self.source_height + dist_traveled
-            else:
-                return self.source_height - dist_traveled
+            velocity_str = 'stopping'
+        print(height_str + velocity_str)
