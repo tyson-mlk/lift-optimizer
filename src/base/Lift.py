@@ -4,6 +4,7 @@ import pandas as pd
 from base.Floor import Floor
 from base.PassengerList import PassengerList, PASSENGERS
 from base.FloorList import FLOOR_LIST, MAX_FLOOR, MIN_FLOOR
+from metrics.MovingModel import MovingModel, MovingStatus
 
 LIFT_CAPACITY_DEFAULT = 12
 
@@ -19,6 +20,7 @@ class Lift:
         self.passenger_count = 0
         self.passengers: PassengerList = PassengerList()
         self.calculate_passenger_count()
+        self.model = MovingModel(model=model)
 
     def calculate_passenger_count(self) -> None:
         self.passenger_count = self.passengers.count_passengers()
@@ -192,13 +194,23 @@ class Lift:
 
     def calc_time_to_move(self, old_floor, new_floor):
         "distance lookup function takes into account time for acceleration and deceleration"
-        from metrics.MovingTime import MovingTime
 
         new_height = new_floor.height
         old_height = old_floor.height
         distance = abs( new_height - old_height)
-        return MovingTime().calc_model(distance)
-    
+        return self.model.calc_time(distance)
+
+    # to init test
+    def calc_time_to_move_while_moving(self, time_elapsed, new_floor):
+        moving_status = MovingStatus(
+            source=self.get_current_floor().name,
+            target=new_floor.name,
+            a=self.model.a, max_v=self.model.max_v, model=self.model.model_type
+        )
+        height, direction, velocity = moving_status.calc_state(time_elapsed)
+        new_floor_height = FLOOR_LIST.get_floor(new_floor).height
+        return moving_status.calc_time(height, direction, velocity, new_floor_height)
+
     def next_lift_passenger_target(self):
         """
         next lift target by passengers in the lift

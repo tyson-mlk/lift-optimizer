@@ -127,3 +127,8 @@ print('I',  l1.name, l1.passengers.df, p_list.df) # Floor 5
 # l1.move(first)
 
 # l1.offboard_selected()
+
+# from metrics.MovingModel import MovingHeight
+
+# mh = MovingHeight('000', '002')
+# mh.print_status(*mh.calc_state(3))

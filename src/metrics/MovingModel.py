@@ -1,22 +1,23 @@
 from math import sqrt
-from base.FloorList import FLOOR_LIST
+from base.FloorList import FLOOR_LIST, MAX_FLOOR, MIN_FLOOR
 
 
-class MovingTime:
+class MovingModel:
     
     def __init__(self, a: float = 1.0, max_v: float = 4.0,
                  overhead: float = 2.0, model: str = "accel") -> None:
         self.a = a
         self.max_v = max_v
         self.overhead = overhead
+        self.model_type = model
         if model == "accel":
-            self.calc_model = \
-            lambda dist: MovingTime.accel_model_time(
+            self.calc_time = \
+            lambda dist: MovingModel.accel_model_time(
                 self.a, self.max_v, dist
             )
         elif model == "unif":
-            self.calc_model = \
-            lambda dist: MovingTime.uniform_model_time(
+            self.calc_time = \
+            lambda dist: MovingModel.uniform_model_time(
                 self.overhead, self.max_v, dist
             )
 
@@ -36,7 +37,7 @@ class MovingTime:
         return overhead + move_time
 
 
-class MovingHeight:
+class MovingStatus:
     def __init__(self, source, target,
                  a: float = 1.0, max_v: float = 4.0,
                  overhead: float = 2.0, model: str = "accel") -> None:
@@ -48,13 +49,14 @@ class MovingHeight:
         # either 'U' or 'D' for moving
         self.dir = 'U' if self.target_height > self.source_height else 'D'
         self.dist = abs(self.source_height - self.target_height)
+        self.model_type = model
         if model == 'accel':
             self.accel_dist = self.max_v ** 2 / self.a
             self.time_to_max = self.max_v / self.a
             self.time_at_max = max( (self.dist - self.max_v ** 2 / self.a) / self.max_v, 0)
-            self.calc_state = lambda t: self.accel_model_status(t)
+            self.calc_state = lambda t: self.accel_model_status_at(t)
         elif model == 'unif':
-            self.calc_state = lambda t: self.uniform_model_status(t)
+            self.calc_state = lambda t: self.uniform_model_status_at(t)
 
     def accel_model_reaches_max(self):
         accel_dist = self.max_v ** 2 / self.a
@@ -99,7 +101,7 @@ class MovingHeight:
             velocity = time_est_remaining * self.a
             return dist_traveled, self.dir, velocity
 
-    def accel_model_status(self, time_elapsed):
+    def accel_model_status_at(self, time_elapsed):
         if self.accel_model_reaches_max():
             dist, d, v = self.accel_model_distance_velocity_with_max(time_elapsed)
             return self.get_height(dist), d, v
@@ -107,7 +109,7 @@ class MovingHeight:
             dist, d, v = self.accel_model_distance_velocity_no_max(time_elapsed)
             return self.get_height(dist), d, v
 
-    def uniform_model_status(self, time_elapsed):
+    def uniform_model_status_at(self, time_elapsed):
         if time_elapsed < self.overhead / 2:
             dist_traveled = 0
             velocity = 0
@@ -125,7 +127,52 @@ class MovingHeight:
             return self.source_height + dist_traveled
         else:
             return self.source_height - dist_traveled
-        
+    # to test
+    def get_dist_to_stop(self, velocity):
+        assert self.model_type == "accel"
+        return velocity ** 2 / self.a / 2
+
+    # to test
+    def get_time_to_stop(self, velocity):
+        assert self.model_type == "accel"
+        return velocity / self.a
+
+    # to test
+    def get_status_at_stop(self, height, direction, velocity):
+        assert self.model_type == "accel"
+        assert direction in ['U', 'D']
+        if direction == 'U':
+            height = height + self.get_dist_to_stop(velocity)
+        else:
+            height = height - self.get_dist_to_stop(velocity)
+        return height, direction, 0.0
+
+    # to test
+    def get_stoppability(self, height, direction, velocity, new_height):
+        assert self.model_type == "accel"
+        assert direction in ['U', 'D']
+        stopping_height = self.get_status_at_stop(height, direction, velocity)[0]
+        if direction == 'U':
+            return stopping_height <= new_height
+        else:
+            return stopping_height >= new_height
+
+    # to test
+    def calc_time(self, height, direction, velocity, new_height):
+        if self.get_stoppability(height, direction, velocity, new_height):
+            stopping_height = self.get_status_at_stop(height, direction, velocity)[0]
+            if direction == 'U':
+                max_speed_dist = new_height - stopping_height
+            else:
+                max_speed_dist = stopping_height - new_height
+            return max_speed_dist / self.max_v + self.get_time_to_stop(velocity)
+        else:
+            trans_time = self.get_time_to_stop(velocity)
+            trans_height = self.get_status_at_stop(height, direction, velocity)[0]
+            distance = abs(new_height - trans_height)
+            model = MovingModel(a=self.a, max_v=self.max_v, model=self.model_type)
+            return trans_time + model.calc_time(distance)
+
     def print_status(self, height, direction, velocity):
         height_str = f'Lift at {round(height, 2)}m '
         if velocity > 0:
