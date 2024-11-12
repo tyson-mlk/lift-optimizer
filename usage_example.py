@@ -25,6 +25,8 @@ l1.offboard_arrived()
 # l1.onboard_random_available()
 l1.onboard_earliest_arrival()
 
+p_list.update_passenger_metrics()
+
 print('B', l1.name, l1.passengers.df, p_list.df) # Floor 0
 
 lift_target = f_list.get_floor(l1.next_baseline_target())
@@ -37,6 +39,8 @@ l1.onboard_earliest_arrival()
 p_list.passenger_arrival(base.Passenger.Passenger('004', '000', datetime.now()))
 p_list.passenger_arrival(base.Passenger.Passenger('008', '010', datetime.now()))
 
+p_list.update_passenger_metrics()
+
 print('C', l1.name, l1.passengers.df, p_list.df) # Floor 2
 
 lift_target = f_list.get_floor(l1.next_baseline_target())
@@ -45,6 +49,8 @@ l1.move(lift_target)
 l1.offboard_arrived()
 # l1.onboard_random_available()
 l1.onboard_earliest_arrival()
+
+p_list.update_passenger_metrics()
 
 print('D',  l1.name, l1.passengers.df, p_list.df) # Floor 8
 
@@ -57,6 +63,8 @@ l1.onboard_earliest_arrival()
 
 p_list.passenger_arrival(base.Passenger.Passenger('008', '011', datetime.now()))
 
+p_list.update_passenger_metrics()
+
 print('E',  l1.name, l1.passengers.df, p_list.df) # Floor 10
 
 lift_target = f_list.get_floor(l1.next_baseline_target())
@@ -68,6 +76,8 @@ l1.onboard_earliest_arrival()
 
 p_list.passenger_arrival(base.Passenger.Passenger('001', '005', datetime.now()))
 
+p_list.update_passenger_metrics()
+
 print('F',  l1.name, l1.passengers.df, p_list.df) # Floor 4
 
 lift_target = f_list.get_floor(l1.next_baseline_target())
@@ -76,6 +86,8 @@ l1.move(lift_target)
 l1.offboard_arrived()
 # l1.onboard_random_available()
 l1.onboard_earliest_arrival()
+
+p_list.update_passenger_metrics()
 
 print('G',  l1.name, l1.passengers.df, p_list.df) # Floor 0
 
@@ -86,6 +98,8 @@ l1.offboard_arrived()
 # l1.onboard_random_available()
 l1.onboard_earliest_arrival()
 
+p_list.update_passenger_metrics()
+
 print('H',  l1.name, l1.passengers.df, p_list.df) # Floor 1
 
 lift_target = f_list.get_floor(l1.next_baseline_target())
@@ -95,10 +109,9 @@ l1.offboard_arrived()
 # l1.onboard_random_available()
 l1.onboard_earliest_arrival()
 
-print('I',  l1.name, l1.passengers.df, p_list.df) # Floor 5
-
 p_list.update_passenger_metrics()
-print(p_list.df)
+
+print('I',  l1.name, l1.passengers.df, p_list.df) # Floor 5
 
 # p_list.df
 # l1.passengers.df

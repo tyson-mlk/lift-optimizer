@@ -3,9 +3,6 @@ from base.Lift import Lift
 
 def boarding_time(lift: Lift, pre_board_cnt, boarding_off_cnt, boarding_on_cnt) -> float:
     capacity = lift.capacity
-    pre_board_cnt
-    boarding_off_cnt
-    boarding_on_cnt
     semi_cnt = pre_board_cnt - boarding_off_cnt
     after_board_cnt = pre_board_cnt - boarding_off_cnt + boarding_on_cnt
     if after_board_cnt > capacity:

@@ -13,6 +13,7 @@ class Lift:
     def __init__(self, name, floorname, dir, capacity = LIFT_CAPACITY_DEFAULT, model = "accel") -> None:
         self.name = name
         self.floor = floorname
+        self.height = self.get_current_floor().height
         self.dir = dir
         self.capacity = capacity
         self.passenger_count = 0
@@ -168,9 +169,9 @@ class Lift:
         current_floor = FLOOR_LIST.get_floor(self.floor)
         time_to_move = self.calc_time_to_move(current_floor, floor)
         print('time to move is', time_to_move)
-        if floor.name > self.floor:
+        if floor.height > self.height:
             self.dir = 'U'
-        elif floor.name < self.floor:
+        elif floor.height < self.height:
             self.dir = 'D'
         else:
             self.dir = 'S'
@@ -184,6 +185,7 @@ class Lift:
             self.dir = 'D'
         
         self.floor = floor.name
+        self.height = floor.height
         self.passengers.update_passenger_floor(floor)
         PASSENGERS.update_lift_passenger_floor(self, floor)
 

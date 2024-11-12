@@ -101,7 +101,6 @@ class PassengerList:
         self.df = pd.concat([self.df, passenger_df])
 
     def passenger_arrival(self, passenger: Passenger):
-        # assert target_floor in FLOORS
         passenger_df = PassengerList.passenger_to_df(passenger)
         self.add_passenger_list(passenger_df)
         
