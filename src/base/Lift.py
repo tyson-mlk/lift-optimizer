@@ -210,16 +210,27 @@ class Lift:
         return moving_status.calc_state(time_elapsed)
 
     # to init test
-    def calc_time_to_move_while_moving(self, time_elapsed, source_floor, target_floor, proposed_floor):
+    def calc_time_to_move_from_floor(self, time_elapsed, source_floor, target_floor, proposed_floor):
         assert self.model.model_type == "accel"
 
         height, direction, velocity = self.get_moving_status_from_floor(time_elapsed, source_floor, target_floor)
-        proposed_floor_height = FLOOR_LIST.get_floor(proposed_floor).height
 
         from metrics.CalcAccelModelMovingStatus import CalcAccelModelMovingStatus
         moving_status = CalcAccelModelMovingStatus(height, direction, velocity, self.model)
 
+        return self.calc_time_to_move_while_moving(moving_status, proposed_floor)
+    
+    # to init test
+    def calc_time_to_move_while_moving(self, moving_status, proposed_floor):
+        proposed_floor_height = FLOOR_LIST.get_floor(proposed_floor).height
+
         return moving_status.calc_time(proposed_floor_height)
+    
+    # to init test
+    def calc_is_floor_reachable_while_moving(self, moving_status, proposed_floor):
+        proposed_floor_height = FLOOR_LIST.get_floor(proposed_floor).height
+
+        return moving_status.get_stoppability(proposed_floor_height)
 
     def next_lift_passenger_target(self):
         """
