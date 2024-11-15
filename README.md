@@ -9,7 +9,6 @@ lift optimization dev
 
 ## TODO:
 - setup lifts to respond to passenger requests while moving
-- add log events for lifts apart from print into file
 - use async for lift movement and boarding
 
 - add live visualizer for multi-floor and multi-lift with passenger counts

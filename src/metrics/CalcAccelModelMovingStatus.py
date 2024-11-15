@@ -66,4 +66,6 @@ class CalcAccelModelMovingStatus:
             velocity_str = f'moving {self.direction} with {round(self.velocity, 2)}ms-1'
         else:
             velocity_str = 'stopping'
-        print(height_str + velocity_str)
+        print_str = height_str + velocity_str
+        print(print_str)
+        return print_str

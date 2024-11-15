@@ -1,6 +1,6 @@
 import asyncio
 import pandas as pd
-from logging import INFO
+from logging import INFO, DEBUG
 
 from utils.Logging import get_logger
 from base.Floor import Floor
@@ -24,7 +24,14 @@ class Lift:
         self.passengers: PassengerList = PassengerList()
         self.calculate_passenger_count()
         self.model = LiftSpec(model=model)
-        self.logger = get_logger(self.__class__.__name__, INFO)
+        logger = get_logger(self.__class__.__name__, INFO)
+        detail_logger = get_logger(self.__class__.__name__, DEBUG)
+        self.log = lambda msg: logger.info(msg)
+        self.detail_log = lambda msg: detail_logger.debug(msg)
+        self.log(f"{self.name}: init")
+
+    def __del__(self):
+        self.log(f"{self.name}: destruct")
 
     def calculate_passenger_count(self) -> None:
         self.passenger_count = self.passengers.count_passengers()
@@ -51,16 +58,27 @@ class Lift:
         from metrics.BoardingTime import boarding_time
 
         num_to_onboard = floor.passengers.count_passengers()
+        if num_to_onboard == 0:
+            return None
         time_to_onboard = boarding_time(self, self.passenger_count, 0, num_to_onboard)
         if time_to_onboard > 0:
-            print(f'onboarding {num_to_onboard} passengers takes {time_to_onboard} s')
+            self.detail_log(f'onboarding {num_to_onboard} passengers takes {time_to_onboard} s')
             time.sleep(time_to_onboard)
 
+        self.log(
+            f"{self.name}: "
+            f"Onboarding {num_to_onboard} passengers "
+            f"at floor {floor.name}"
+        )
         self.passengers.bulk_add_passengers(floor.passengers)
         self.passengers.assign_lift(self)
         self.passengers.board(floor.passengers)
         floor.onboard_all()
         self.calculate_passenger_count()
+        self.log(
+            f"{self.name}: "
+            f"Updated passenger count {self.passenger_count} "
+        )
 
     def onboard_random_available(self):
         floor = FLOOR_LIST.get_floor(self.floor)
@@ -74,11 +92,18 @@ class Lift:
         from metrics.BoardingTime import boarding_time
 
         num_to_onboard = passenger_list.count_passengers()
+        if num_to_onboard == 0:
+            return None
         time_to_onboard = boarding_time(self, self.passenger_count, 0, num_to_onboard)
         if time_to_onboard > 0:
-            print(f'onboarding {num_to_onboard} passengers takes {time_to_onboard} s')
+            self.detail_log(f'onboarding {num_to_onboard} passengers takes {time_to_onboard} s')
             time.sleep(time_to_onboard)
 
+        self.log(
+            f"{self.name}: "
+            f"Onboarding {num_to_onboard} passengers "
+            f"at floor {floor.name}"
+        )
         PASSENGERS.assign_lift_for_selection(self, passenger_list)
         PASSENGERS.board(passenger_list)
         floor.onboard_selected(passenger_list)
@@ -86,6 +111,10 @@ class Lift:
         self.passengers.assign_lift(self)
         self.passengers.board(passenger_list)
         self.calculate_passenger_count()
+        self.log(
+            f"{self.name}: "
+            f"Updated passenger count {self.passenger_count} "
+        )
 
     def onboard_earliest_arrival(self):
         floor = FLOOR_LIST.get_floor(self.floor)
@@ -99,11 +128,18 @@ class Lift:
         from metrics.BoardingTime import boarding_time
 
         num_to_onboard = passenger_list.count_passengers()
+        if num_to_onboard == 0:
+            return None
         time_to_onboard = boarding_time(self, self.passenger_count, 0, num_to_onboard)
         if time_to_onboard > 0:
-            print(f'onboarding {num_to_onboard} passengers takes {time_to_onboard} s')
+            self.detail_log(f'onboarding {num_to_onboard} passengers takes {time_to_onboard} s')
             time.sleep(time_to_onboard)
 
+        self.log(
+            f"{self.name}: "
+            f"Onboarding {num_to_onboard} passengers "
+            f"at floor {floor.name}"
+        )
         PASSENGERS.assign_lift_for_selection(self, passenger_list)
         PASSENGERS.board(passenger_list)
         floor.onboard_selected(passenger_list)
@@ -111,25 +147,39 @@ class Lift:
         self.passengers.assign_lift(self)
         self.passengers.board(passenger_list)
         self.calculate_passenger_count()
+        self.log(
+            f"{self.name}: "
+            f"Updated passenger count {self.passenger_count} "
+        )
 
     def offboard_all(self):
-        # TODO: to log arrival times of passengers
+        floor = FLOOR_LIST.get_floor(self.floor)
         PASSENGERS.update_arrival(self.passengers)
 
         import time
         from metrics.BoardingTime import boarding_time
 
         num_to_offboard = self.passenger_count
+        if num_to_offboard == 0:
+            return None
         time_to_offboard = boarding_time(self, num_to_offboard, num_to_offboard, 0)
         if time_to_offboard > 0:
-            print(f'offboarding {num_to_offboard} passengers takes {time_to_offboard} s')
+            self.detail_log(f'offboarding {num_to_offboard} passengers takes {time_to_offboard} s')
             time.sleep(time_to_offboard)
 
+        self.log(
+            f"{self.name}: "
+            f"Offboarding {num_to_offboard} passengers "
+            f"at floor {floor.name}"
+        )
         self.passengers.remove_all_passengers()
         self.calculate_passenger_count()
+        self.log(
+            f"{self.name}: "
+            f"Updated passenger count {self.passenger_count} "
+        )
 
     def offboard_arrived(self):
-        # TODO: to log arrival times of passengers
         current_floor = FLOOR_LIST.get_floor(self.floor)
         to_offboard = self.passengers.filter_by_destination(current_floor)
 
@@ -137,14 +187,26 @@ class Lift:
         from metrics.BoardingTime import boarding_time
 
         num_to_offboard = to_offboard.count_passengers()
+        if num_to_offboard == 0:
+            return None
         time_to_offboard = boarding_time(self, self.passenger_count, num_to_offboard, 0)
         if time_to_offboard > 0:
-            print(f'offboarding {num_to_offboard} passengers takes {time_to_offboard} s')
+            self.detail_log(f'offboarding {num_to_offboard} passengers takes {time_to_offboard} s')
             time.sleep(time_to_offboard)
 
+        self.log(
+            f"{self.name}: "
+            f"Offboarding {num_to_offboard} passengers "
+            f"at floor {current_floor.name}"
+        )
         self.passengers.remove_passengers(to_offboard)
         self.calculate_passenger_count()
         PASSENGERS.update_arrival(to_offboard)
+        self.calculate_passenger_count()
+        self.log(
+            f"{self.name}: "
+            f"Updated passenger count {self.passenger_count} "
+        )
 
     # async def move(self, floor):
     #     "moves to floor, assumes it is on a stopped state"
@@ -174,14 +236,14 @@ class Lift:
         "moves to floor, assumes it is on a stopped state"
         current_floor = FLOOR_LIST.get_floor(self.floor)
         time_to_move = self.calc_time_to_move(current_floor, floor)
-        print('time to move is', time_to_move)
+        self.detail_log(f'time to move is {time_to_move}')
         if floor.height > self.height:
             self.dir = 'U'
         elif floor.height < self.height:
             self.dir = 'D'
         else:
             self.dir = 'S'
-        self.logger.info(
+        self.log(
             f"{self.name}: "
             f"Start move from {current_floor.name} "
             f"height {current_floor.height} "
@@ -196,7 +258,7 @@ class Lift:
         elif floor.name == MAX_FLOOR:
             self.dir = 'D'
         
-        self.logger.info(
+        self.log(
             f"{self.name}: "
             f"Stop move at {floor.name} "
             f"height {floor.height} "

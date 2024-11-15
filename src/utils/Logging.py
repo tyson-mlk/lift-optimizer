@@ -11,7 +11,11 @@ def get_logger(logger_name, logging_level):
             if e.errno != errno.EEXIST:
                 raise
 
-    logfile_name = f"{logfile_dir}/{logger_name}.log"
+    if logging_level == logging.INFO:
+        logfile_name = f"{logfile_dir}/{logger_name}.log"
+    elif logging_level == logging.DEBUG:
+        logfile_name = f"{logfile_dir}/{logger_name}_detail.log"
+
     if not os.path.exists(logfile_name):
         try:
             open(logfile_name, 'a').close()
