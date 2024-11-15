@@ -2,10 +2,17 @@
 # start from src/ folder
 import base
 from datetime import datetime
+import pandas as pd
 
 p_list = base.PassengerList.PASSENGERS
-p_list.passenger_arrival(base.Passenger.Passenger('000', '010', datetime.now()))
-p_list.passenger_arrival(base.Passenger.Passenger('000', '002', datetime.now()))
+p1 = base.Passenger.Passenger('000', '010', datetime.now())
+p1_df = base.PassengerList.PassengerList.passenger_to_df(p1) 
+p2 = base.Passenger.Passenger('000', '002', datetime.now())
+p2_df = base.PassengerList.PassengerList.passenger_to_df(p2)
+pp12 = base.PassengerList.PassengerList(pd.concat([p1_df, p2_df]))
+p_list.passenger_list_arrival(pp12)
+# p_list.passenger_arrival(base.Passenger.Passenger('000', '010', datetime.now()))
+# p_list.passenger_arrival(base.Passenger.Passenger('000', '002', datetime.now()))
 p_list.passenger_arrival(base.Passenger.Passenger('010', '000', datetime.now()))
 
 f_list = base.FloorList.FLOOR_LIST

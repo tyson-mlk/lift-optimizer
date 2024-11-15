@@ -1,7 +1,7 @@
 import logging
 import os, errno
 
-def get_logger(logger_name, logging_level):
+def get_logger(logger_name, logger_class, logging_level):
 
     logfile_dir = '../logs'
     if not os.path.exists(logfile_dir):
@@ -12,9 +12,9 @@ def get_logger(logger_name, logging_level):
                 raise
 
     if logging_level == logging.INFO:
-        logfile_name = f"{logfile_dir}/{logger_name}.log"
+        logfile_name = f"{logfile_dir}/{logger_class}.log"
     elif logging_level == logging.DEBUG:
-        logfile_name = f"{logfile_dir}/{logger_name}_detail.log"
+        logfile_name = f"{logfile_dir}/{logger_class}_detail.log"
 
     if not os.path.exists(logfile_name):
         try:
@@ -23,7 +23,7 @@ def get_logger(logger_name, logging_level):
             if e.errno != errno.EEXIST:
                 raise
 
-    py_logger = logging.getLogger(logfile_name)
+    py_logger = logging.getLogger(logger_name)
     py_logger.setLevel(logging_level)
 
     py_handler = logging.FileHandler(logfile_name)

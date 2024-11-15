@@ -1,3 +1,7 @@
+from logging import INFO, DEBUG
+
+from utils.Logging import get_logger
+
 class Floor:
     def __init__(self, floorname, height) -> None:
         self.name = floorname
@@ -5,6 +9,10 @@ class Floor:
 
         from base.PassengerList import PassengerList
         self.passengers: PassengerList = PassengerList()
+
+    def init_logger(self):
+        logger = get_logger(self.name, self.__class__.__name__, INFO)
+        self.log = lambda msg: logger.info(msg)
 
     @property
     def name(self):

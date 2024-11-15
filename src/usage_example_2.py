@@ -29,3 +29,7 @@ ms2.calc_time(3)
 ms2.calc_time(10)
 ms2.calc_time(16)
 ms2.calc_time(20)
+
+# from metrics.TimeMetrics import calculate_all_metrics
+
+# calculate_all_metrics(p_list).df

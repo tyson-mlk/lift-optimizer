@@ -1,6 +1,8 @@
 import pandas as pd
 from datetime import datetime
+from logging import INFO, DEBUG
 
+from utils.Logging import get_logger
 from base.Passenger import Passenger
 from base.Floor import Floor
 
@@ -20,7 +22,7 @@ class PassengerList:
         'time_on_lift': 'float64'
     }
 
-    def __init__(self, passenger_list_df = None):
+    def __init__(self, passenger_list_df = None, p_list_name = None):
         if passenger_list_df is not None:
             self.df: pd.DataFrameType = pd.DataFrame(
                 passenger_list_df,
@@ -35,6 +37,16 @@ class PassengerList:
             ).astype(
                 PassengerList.schema
             )
+        self.name = p_list_name
+        if p_list_name is not None:
+            logger = get_logger(p_list_name, self.__class__.__name__, INFO)
+            self.log = lambda msg: logger.info(msg)
+            self.log(f"{p_list_name}: init")
+        else:
+            self.log = lambda *args: None
+
+    def __del__(self):
+        self.log(f"{self.name}: destruct")
 
     @classmethod
     def passenger_to_df(cls, passenger: Passenger):
@@ -73,6 +85,9 @@ class PassengerList:
     
     def count_passengers(self) -> int:
         return self.df.shape[0]
+    
+    def count_traveling_passengers(self) -> int:
+        return (self.df.status != 'Arrived').sum()
 
     def bulk_add_passengers(self, passengers):
         self.df = pd.concat([
@@ -96,6 +111,14 @@ class PassengerList:
     def update_arrival(self, passengers):
         self.df.loc[passengers.df.index, 'status'] = 'Arrived'
         self.df.loc[passengers.df.index, 'dest_arrival_time'] = datetime.now()
+        self.log(
+            f"{self.name}:"
+            f"arrival at destination of {passengers.count_passengers()}"
+        )
+        self.log(
+            f"{self.name}:"
+            f"passenger count is {self.count_traveling_passengers()}"
+        )
 
     def add_passenger_list(self, passenger_df: pd.DataFrame):
         self.df = pd.concat([self.df, passenger_df])
@@ -103,10 +126,53 @@ class PassengerList:
     def passenger_arrival(self, passenger: Passenger):
         passenger_df = PassengerList.passenger_to_df(passenger)
         self.add_passenger_list(passenger_df)
+        self.log(
+            f"{self.name}:"
+            f"passenger arrival of 1"
+        )
+        self.log(
+            f"{self.name}:"
+            f"passenger count is {self.count_traveling_passengers()}"
+        )
         
         from base.FloorList import FLOOR_LIST
         floor = FLOOR_LIST.get_floor(passenger.source)
         floor.passengers.add_passenger_list(passenger_df)
+        floor.log(
+            f"{floor.name}:"
+            f"add 1 passenger"
+        )
+        floor.log(
+            f"{floor.name}:"
+            f"passenger count is {floor.passengers.count_passengers()}"
+        )
+
+    def passenger_list_arrival(self, passengers):
+        passenger_df = passengers.df
+        self.add_passenger_list(passenger_df)
+        self.log(
+            f"{self.name}:"
+            f"passenger arrival of {passengers.count_passengers()}"
+        )
+        self.log(
+            f"{self.name}:"
+            f"passenger count is {self.count_traveling_passengers()}"
+        )
+        
+        from base.FloorList import FLOOR_LIST
+        for floor_name in passengers.df.source.unique():
+            floor = FLOOR_LIST.get_floor(floor_name)
+            floor.passengers.add_passenger_list(
+                passengers.df.loc[passengers.df.source == floor_name,:]
+            )
+            floor.log(
+                f"{floor.name}:"
+                f"add {(passengers.df.source == floor_name).sum()} passengers"
+            )
+            floor.log(
+                f"{floor.name}:"
+                f"passenger count is {floor.passengers.count_passengers()}"
+            )
 
     def complement_passenger_list(self, passenger_list):
         self.df = self.df.loc[
@@ -163,4 +229,4 @@ class PassengerList:
 
         self.df = calculate_all_metrics(self).df
 
-PASSENGERS = PassengerList()
+PASSENGERS = PassengerList(p_list_name='all passengers')

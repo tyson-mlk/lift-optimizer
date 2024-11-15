@@ -24,8 +24,8 @@ class Lift:
         self.passengers: PassengerList = PassengerList()
         self.calculate_passenger_count()
         self.model = LiftSpec(model=model)
-        logger = get_logger(self.__class__.__name__, INFO)
-        detail_logger = get_logger(self.__class__.__name__, DEBUG)
+        logger = get_logger(name, self.__class__.__name__, INFO)
+        detail_logger = get_logger(name+'_det', self.__class__.__name__, DEBUG)
         self.log = lambda msg: logger.info(msg)
         self.detail_log = lambda msg: detail_logger.debug(msg)
         self.log(f"{self.name}: init")
@@ -74,6 +74,14 @@ class Lift:
         self.passengers.assign_lift(self)
         self.passengers.board(floor.passengers)
         floor.onboard_all()
+        floor.log(
+            f"{floor.name}: "
+            f"{num_to_onboard} passengers boarded"
+        )
+        floor.log(
+            f"{floor.name}:"
+            f"passenger count is {floor.passengers.count_passengers()}"
+        )
         self.calculate_passenger_count()
         self.log(
             f"{self.name}: "
@@ -107,6 +115,14 @@ class Lift:
         PASSENGERS.assign_lift_for_selection(self, passenger_list)
         PASSENGERS.board(passenger_list)
         floor.onboard_selected(passenger_list)
+        floor.log(
+            f"{floor.name}: "
+            f"{num_to_onboard} passengers boarded"
+        )
+        floor.log(
+            f"{floor.name}:"
+            f"passenger count is {floor.passengers.count_passengers()}"
+        )
         self.passengers.bulk_add_passengers(passenger_list)
         self.passengers.assign_lift(self)
         self.passengers.board(passenger_list)
@@ -143,6 +159,14 @@ class Lift:
         PASSENGERS.assign_lift_for_selection(self, passenger_list)
         PASSENGERS.board(passenger_list)
         floor.onboard_selected(passenger_list)
+        floor.log(
+            f"{floor.name}: "
+            f"{num_to_onboard} passengers boarded"
+        )
+        floor.log(
+            f"{floor.name}:"
+            f"passenger count is {floor.passengers.count_passengers()}"
+        )
         self.passengers.bulk_add_passengers(passenger_list)
         self.passengers.assign_lift(self)
         self.passengers.board(passenger_list)
