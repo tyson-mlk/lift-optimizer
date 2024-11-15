@@ -1,6 +1,8 @@
 import asyncio
 import pandas as pd
+from logging import INFO
 
+from utils.Logging import get_logger
 from base.Floor import Floor
 from base.PassengerList import PassengerList, PASSENGERS
 from base.FloorList import FLOOR_LIST, MAX_FLOOR, MIN_FLOOR
@@ -22,6 +24,7 @@ class Lift:
         self.passengers: PassengerList = PassengerList()
         self.calculate_passenger_count()
         self.model = LiftSpec(model=model)
+        self.logger = get_logger(self.__class__.__name__, INFO)
 
     def calculate_passenger_count(self) -> None:
         self.passenger_count = self.passengers.count_passengers()
@@ -178,6 +181,12 @@ class Lift:
             self.dir = 'D'
         else:
             self.dir = 'S'
+        self.logger.info(
+            f"{self.name}: "
+            f"Start move from {current_floor.name} "
+            f"height {current_floor.height} "
+            f"at dir {self.dir}"
+        )
 
         import time
         time.sleep(time_to_move)
@@ -187,6 +196,11 @@ class Lift:
         elif floor.name == MAX_FLOOR:
             self.dir = 'D'
         
+        self.logger.info(
+            f"{self.name}: "
+            f"Stop move at {floor.name} "
+            f"height {floor.height} "
+        )
         self.floor = floor.name
         self.height = floor.height
         self.passengers.update_passenger_floor(floor)
