@@ -1,5 +1,6 @@
 import asyncio
 import pandas as pd
+from datetime import datetime, timedelta
 from logging import INFO, DEBUG
 
 from utils.Logging import get_logger
@@ -44,8 +45,11 @@ class Lift:
 
     def get_current_floor_passenger_count(self) -> int:
         return self.get_current_floor().get_floor_count()
-
+    
     def has_capacity(self):
+        return self.passenger_count < self.capacity
+
+    def has_floor_capacity(self):
         floor_count = self.get_current_floor().get_floor_count()
         return self.passenger_count + floor_count <= self.capacity
 
@@ -90,7 +94,7 @@ class Lift:
 
     def onboard_random_available(self):
         floor = FLOOR_LIST.get_floor(self.floor)
-        if self.has_capacity():
+        if self.has_floor_capacity():
             selection = floor.passengers.df
         else:
             selection = floor.random_select_passengers(self.capacity, self.passenger_count)
@@ -134,7 +138,7 @@ class Lift:
 
     def onboard_earliest_arrival(self):
         floor = FLOOR_LIST.get_floor(self.floor)
-        if self.has_capacity():
+        if self.has_floor_capacity():
             selection = floor.passengers.df
         else:
             selection = floor.select_passengers_by_earliest_arrival(self.capacity, self.passenger_count)
@@ -232,31 +236,8 @@ class Lift:
             f"Updated passenger count {self.passenger_count} "
         )
 
-    # async def move(self, floor):
-    #     "moves to floor, assumes it is on a stopped state"
-    #     current_floor = FLOOR_LIST.get_floor(self.floor)
-    #     time_to_move = self.calc_time_to_move(current_floor, floor)
-    #     print('time to move is', time_to_move)
-    #     if floor.floor > self.floor:
-    #         self.dir = 'U'
-    #     elif floor.floor < self.floor:
-    #         self.dir = 'D'
-    #     else:
-    #         self.dir = 'S'
-
-    #     await asyncio.sleep(time_to_move)
-
-    #     if floor.floor == MIN_FLOOR:
-    #         self.dir = 'U'
-    #     elif floor.floor == MAX_FLOOR:
-    #         self.dir = 'D'
-        
-    #     self.floor = floor.floor
-    #     self.passengers.update_passenger_floor(floor)
-    #     PASSENGERS.update_lift_passenger_floor(self, floor)
-
-        
-    def move(self, floor):
+    # to test
+    async def move(self, floor):
         "moves to floor, assumes it is on a stopped state"
         current_floor = FLOOR_LIST.get_floor(self.floor)
         time_to_move = self.calc_time_to_move(current_floor, floor)
@@ -274,24 +255,72 @@ class Lift:
             f"at dir {self.dir}"
         )
 
-        import time
-        time.sleep(time_to_move)
+        start_move_time = datetime.now()
+        try:
+            async with asyncio.timeout(time_to_move):
+                # TODO: error due to await of generator
+                new_source, new_target_floor, new_dir = await PASSENGERS.register_arrivals()
+                if self.is_within_next_target(current_floor, floor, self.dir, new_source, new_dir) and self.has_capacity():
+                    time_elapsed = datetime.now() - start_move_time
+                    moving_status = self.get_moving_status_from_floor(time_elapsed, current_floor, floor)
+                    redirect = self.calc_is_floor_reachable_while_moving(moving_status, new_source)
+                    if redirect:
+                        time_to_move = self.calc_time_to_move_while_moving(moving_status, new_target_floor)
+                        arrival_time = asyncio.get_running_loop().time() + time_to_move
+                        asyncio.Timeout.reschedule(arrival_time)
+                        floor = new_target_floor
+        except asyncio.TimeoutError:
+            if floor.floor == MIN_FLOOR:
+                self.dir = 'U'
+            elif floor.floor == MAX_FLOOR:
+                self.dir = 'D'
+            
+            self.log(
+                f"{self.name}: "
+                f"Stop move at {floor.name} "
+                f"height {floor.height} "
+            )
+            self.floor = floor.floor
+            self.height = floor.height
+            self.passengers.update_passenger_floor(floor)
+            PASSENGERS.update_lift_passenger_floor(self, floor)
 
-        if floor.name == MIN_FLOOR:
-            self.dir = 'U'
-        elif floor.name == MAX_FLOOR:
-            self.dir = 'D'
         
-        self.log(
-            f"{self.name}: "
-            f"Stop move at {floor.name} "
-            f"height {floor.height} "
-        )
-        self.floor = floor.name
-        self.height = floor.height
-        self.passengers.update_passenger_floor(floor)
-        PASSENGERS.update_lift_passenger_floor(self, floor)
+    # def move(self, floor):
+    #     "moves to floor, assumes it is on a stopped state"
+    #     current_floor = FLOOR_LIST.get_floor(self.floor)
+    #     time_to_move = self.calc_time_to_move(current_floor, floor)
+    #     self.detail_log(f'time to move is {time_to_move}')
+    #     if floor.height > self.height:
+    #         self.dir = 'U'
+    #     elif floor.height < self.height:
+    #         self.dir = 'D'
+    #     else:
+    #         self.dir = 'S'
+    #     self.log(
+    #         f"{self.name}: "
+    #         f"Start move from {current_floor.name} "
+    #         f"height {current_floor.height} "
+    #         f"at dir {self.dir}"
+    #     )
 
+    #     import time
+    #     time.sleep(time_to_move)
+
+    #     if floor.name == MIN_FLOOR:
+    #         self.dir = 'U'
+    #     elif floor.name == MAX_FLOOR:
+    #         self.dir = 'D'
+        
+    #     self.log(
+    #         f"{self.name}: "
+    #         f"Stop move at {floor.name} "
+    #         f"height {floor.height} "
+    #     )
+    #     self.floor = floor.name
+    #     self.height = floor.height
+    #     self.passengers.update_passenger_floor(floor)
+    #     PASSENGERS.update_lift_passenger_floor(self, floor)
 
     def calc_time_to_move(self, old_floor, new_floor):
         "distance lookup function takes into account time for acceleration and deceleration"
@@ -390,3 +419,35 @@ class Lift:
                 return floor_scan.lift_target.min()
 
             return targets.lift_target.max()
+        
+    def is_within_next_target(self, current_floor, current_target, dir, proposed_target, proposed_dir):
+        "assumes current move is for existing passengers, not a preempting move"
+        if proposed_dir != dir:
+            return False
+        if dir == 'U':
+            return (
+                current_target > current_floor
+            ) and (
+                proposed_target < current_target
+            )
+        elif dir == 'D':
+            return (
+                current_target < current_floor
+            ) and (
+                proposed_target > current_target
+            )
+        return False
+    
+    async def lift_baseline_operation(self):
+        next_target = self.next_baseline_target()
+        print(f'lift next target {next_target}')
+        while True:
+            if next_target is not None:
+                print(f'lift moving to target {next_target}')
+                next_floor = FLOOR_LIST.get_floor(next_target)
+                await self.move(next_floor)
+                print(f'lift moved to target {next_target}')
+                next_target = self.next_baseline_target()
+                print(f'lift new next target {next_target}')
+            else:
+                next_target = self.next_baseline_target()

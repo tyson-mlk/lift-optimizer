@@ -125,7 +125,7 @@ print('I',  l1.name, l1.passengers.df, p_list.df) # Floor 5
 
 # ground.random_select_passengers(1,0)
 
-# l1.has_capacity()
+# l1.has_floor_capacity()
 # l1.capacity = 1
 # l1.onboard_random_available()
 

@@ -1,6 +1,7 @@
 import pandas as pd
 from datetime import datetime
 from logging import INFO, DEBUG
+from threading import Thread
 
 from utils.Logging import get_logger
 from base.Passenger import Passenger
@@ -23,6 +24,14 @@ class PassengerList:
     }
 
     def __init__(self, passenger_list_df = None, p_list_name = None):
+        self.thread = Thread(target=self.register_arrivals, name=p_list_name)
+        self.name = p_list_name
+        if p_list_name is not None:
+            logger = get_logger(p_list_name, self.__class__.__name__, INFO)
+            self.log = lambda msg: logger.info(msg)
+            self.log(f"{p_list_name}: init")
+        else:
+            self.log = lambda *args: None
         if passenger_list_df is not None:
             self.df: pd.DataFrameType = pd.DataFrame(
                 passenger_list_df,
@@ -37,16 +46,12 @@ class PassengerList:
             ).astype(
                 PassengerList.schema
             )
-        self.name = p_list_name
-        if p_list_name is not None:
-            logger = get_logger(p_list_name, self.__class__.__name__, INFO)
-            self.log = lambda msg: logger.info(msg)
-            self.log(f"{p_list_name}: init")
-        else:
-            self.log = lambda *args: None
+        self.passenger_arriving = None
+        self.thread.start()
 
     def __del__(self):
         self.log(f"{self.name}: destruct")
+        self.thread.join()
 
     @classmethod
     def passenger_to_df(cls, passenger: Passenger):
@@ -82,6 +87,15 @@ class PassengerList:
         ).astype(
             PassengerList.schema
         )
+    
+    # to test
+    async def register_arrivals(self):
+        # TODO: this function is never run
+        if self.passenger_arriving is not None:
+            arriving_passenger = self.passenger_arriving
+            print('iii')
+            yield arriving_passenger.source, arriving_passenger.target, arriving_passenger.dir
+            self.passenger_arriving = None
     
     def count_passengers(self) -> int:
         return self.df.shape[0]
@@ -146,6 +160,8 @@ class PassengerList:
             f"{floor.name}:"
             f"passenger count is {floor.passengers.count_passengers()}"
         )
+
+        self.passenger_arriving = passenger
 
     def passenger_list_arrival(self, passengers):
         passenger_df = passengers.df
