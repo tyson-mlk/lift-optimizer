@@ -1,3 +1,3 @@
-from sim.PassengerArrival import *
+from sim.PASimOneLift import *
 
 asyncio.run(main=main())

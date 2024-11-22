@@ -28,12 +28,9 @@ for source in FLOOR_LIST.list_floors():
             dir = 'D'
         key = (source, target, dir)
         if (source == '000') | (target == '000'):
-            trip_arrival_rates[key] = 0.05
+            trip_arrival_rates[key] = 0.005
         else:
-            trip_arrival_rates[key] = 0.01
-
-# define lift
-l1 = Lift('l1', '000', 'U')
+            trip_arrival_rates[key] = 0.001
 
 def increment_counter(counter_type):
     COUNTERS[counter_type] += 1
@@ -53,12 +50,12 @@ async def cont_exp_gen(trip, rate=1.0):
         source_floor = trip[0]
         target_floor = trip[1]
         while True:
-            start_time = datetime.now()
             await exp_gen(rate=rate)
             passenger_arrival(source_floor, target_floor, datetime.now())
-            end_time = datetime.now()
             # for logging
-            print('trip', trip, 'rate ', rate, 'generated taking', end_time-start_time)
+            if target_floor > source_floor:
+                print('passenger arrived from', trip[0], 'moving', trip[2], 'to', trip[1])
+            await asyncio.sleep(0)
     except MemoryError:
         print('memory error')
         return None
@@ -69,18 +66,24 @@ async def all_arrivals():
     start_time = datetime.now()
     print(f'all start: {start_time}')
     await asyncio.gather(*jobs)
+    
+async def lift_operation():
+    l1 = Lift('l1', '000', 'U')
 
-# PASSENGERS.passenger_arrival(Passenger('004', '000', datetime.now()))
-# PASSENGERS.passenger_arrival(Passenger('008', '010', datetime.now()))
-
+    task = asyncio.create_task(l1.lift_baseline_operation())
+    await task
 
 async def main():
-    timeout = 20
+    timeout = 120
+    start_time = datetime.now()
+    start_time.hour
     try:
         async with asyncio.timeout(timeout):
-            await asyncio.gather(all_arrivals(), l1.lift_baseline_operation())
+            await asyncio.gather(all_arrivals(), lift_operation())
     except asyncio.TimeoutError:
-        print('timeout')
+        print('timeout: save passengers to file')
+        PASSENGERS.df.sort_values(['status', 'dir', 'source', 'trip_start_time']) \
+            .to_csv(f'./PASimOneLift_{start_time.hour:02}_{start_time.minute:02}_{start_time.second:02}.csv')
 
 if __name__ == "__main__":
     # TODO: nothing is run with main()

@@ -24,7 +24,7 @@ class PassengerList:
         'time_on_lift': 'float64'
     }
 
-    def __init__(self, passenger_list_df = None, p_list_name = None):
+    def __init__(self, passenger_list_df = None, p_list_name = None, lift_tracking = False):
         self.name = p_list_name
         if p_list_name is not None:
             logger = get_logger(p_list_name, self.__class__.__name__, INFO)
@@ -46,12 +46,16 @@ class PassengerList:
             ).astype(
                 PassengerList.schema
             )
-        self.arrival_queue = Queue()
+        if lift_tracking:
+            self.arrival_queue = Queue()
 
-    # TODO: await __del__
-    async def __del__(self):
+    def __del__(self):
         self.log(f"{self.name}: destruct")
-        await self.arrival_queue.join()
+
+    async def __aexit__(self, *excinfo):
+        if 'arrival_queue' in self.__dict__.keys():
+            await self.arrival_queue.join()
+
 
     @classmethod
     def passenger_to_df(cls, passenger: Passenger):
@@ -201,6 +205,10 @@ class PassengerList:
     def filter_by_destination(self, floor: Floor):
         "filters passengers to those on a floor"
         return PassengerList(self.df.loc[self.df.target == floor.name, :])
+
+    def filter_by_direction(self, direction):
+        "filters passengers to those on a floor"
+        return PassengerList(self.df.loc[self.df.dir == direction, :])
     
     def assign_lift(self, lift):
         from base.Lift import Lift
@@ -241,4 +249,4 @@ class PassengerList:
 
         self.df = calculate_all_metrics(self).df
 
-PASSENGERS = PassengerList(p_list_name='all passengers')
+PASSENGERS = PassengerList(p_list_name='all passengers', lift_tracking=True)

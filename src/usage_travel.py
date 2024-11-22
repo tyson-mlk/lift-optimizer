@@ -34,6 +34,9 @@ l1.onboard_earliest_arrival()
 
 p_list.update_passenger_metrics()
 
+# to use async
+# await l1.loading()
+
 print('B', l1.name, l1.passengers.df, p_list.df) # Floor 0
 
 lift_target = f_list.get_floor(l1.next_baseline_target())
