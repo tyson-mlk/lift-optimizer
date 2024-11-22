@@ -2,6 +2,7 @@ import pandas as pd
 from datetime import datetime
 from logging import INFO, DEBUG
 from threading import Thread
+from asyncio import Queue
 
 from utils.Logging import get_logger
 from base.Passenger import Passenger
@@ -24,7 +25,6 @@ class PassengerList:
     }
 
     def __init__(self, passenger_list_df = None, p_list_name = None):
-        self.thread = Thread(target=self.register_arrivals, name=p_list_name)
         self.name = p_list_name
         if p_list_name is not None:
             logger = get_logger(p_list_name, self.__class__.__name__, INFO)
@@ -46,12 +46,12 @@ class PassengerList:
             ).astype(
                 PassengerList.schema
             )
-        self.passenger_arriving = None
-        self.thread.start()
+        self.arrival_queue = Queue()
 
-    def __del__(self):
+    # TODO: await __del__
+    async def __del__(self):
         self.log(f"{self.name}: destruct")
-        self.thread.join()
+        await self.arrival_queue.join()
 
     @classmethod
     def passenger_to_df(cls, passenger: Passenger):
@@ -89,13 +89,9 @@ class PassengerList:
         )
     
     # to test
-    async def register_arrivals(self):
-        # TODO: this function is never run
-        if self.passenger_arriving is not None:
-            arriving_passenger = self.passenger_arriving
-            print('iii')
-            yield arriving_passenger.source, arriving_passenger.target, arriving_passenger.dir
-            self.passenger_arriving = None
+    def register_arrivals(self, passenger):
+        msg = passenger.source, passenger.target, passenger.dir
+        self.arrival_queue.put_nowait(msg)
     
     def count_passengers(self) -> int:
         return self.df.shape[0]
@@ -161,7 +157,7 @@ class PassengerList:
             f"passenger count is {floor.passengers.count_passengers()}"
         )
 
-        self.passenger_arriving = passenger
+        self.register_arrivals(passenger)
 
     def passenger_list_arrival(self, passengers):
         passenger_df = passengers.df

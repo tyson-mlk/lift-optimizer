@@ -258,21 +258,29 @@ class Lift:
         start_move_time = datetime.now()
         try:
             async with asyncio.timeout(time_to_move):
-                # TODO: error due to await of generator
-                new_source, new_target_floor, new_dir = await PASSENGERS.register_arrivals()
-                if self.is_within_next_target(current_floor, floor, self.dir, new_source, new_dir) and self.has_capacity():
-                    time_elapsed = datetime.now() - start_move_time
-                    moving_status = self.get_moving_status_from_floor(time_elapsed, current_floor, floor)
-                    redirect = self.calc_is_floor_reachable_while_moving(moving_status, new_source)
-                    if redirect:
-                        time_to_move = self.calc_time_to_move_while_moving(moving_status, new_target_floor)
-                        arrival_time = asyncio.get_running_loop().time() + time_to_move
-                        asyncio.Timeout.reschedule(arrival_time)
-                        floor = new_target_floor
+                while True:
+                    # TODO:
+                    pa_queue = PASSENGERS.arrival_queue
+                    pa_trigger = asyncio.wait_for(pa_queue.get(), timeout=None)
+                    new_source, new_target_floor, new_dir = await pa_trigger
+                    # TODO: handle extremities in current to allow for further floors 
+                    if  (
+                        self.has_capacity() and 
+                        self.is_within_next_target(current_floor, floor, self.dir, 
+                                                   FLOOR_LIST.get_floor(new_source), new_dir)
+                    ):
+                        time_elapsed = datetime.now() - start_move_time
+                        moving_status = self.get_moving_status_from_floor(time_elapsed, current_floor, floor)
+                        redirect = self.calc_is_floor_reachable_while_moving(moving_status, new_source)
+                        if redirect:
+                            time_to_move = self.calc_time_to_move_while_moving(moving_status, new_target_floor)
+                            new_arrival_time = asyncio.get_running_loop().time() + time_to_move
+                            asyncio.Timeout.reschedule(new_arrival_time)
+                            floor = new_target_floor
         except asyncio.TimeoutError:
-            if floor.floor == MIN_FLOOR:
+            if floor.name == MIN_FLOOR:
                 self.dir = 'U'
-            elif floor.floor == MAX_FLOOR:
+            elif floor.name == MAX_FLOOR:
                 self.dir = 'D'
             
             self.log(
@@ -280,10 +288,12 @@ class Lift:
                 f"Stop move at {floor.name} "
                 f"height {floor.height} "
             )
-            self.floor = floor.floor
+            self.floor = floor.name
             self.height = floor.height
             self.passengers.update_passenger_floor(floor)
             PASSENGERS.update_lift_passenger_floor(self, floor)
+        finally:
+            pa_queue.task_done()
 
         
     # def move(self, floor):
@@ -419,6 +429,33 @@ class Lift:
                 return floor_scan.lift_target.min()
 
             return targets.lift_target.max()
+    
+    # # to test
+    # def furthest_boarded_target(self):
+    #     """
+    #     baseline for lift target algorithm
+    #     attends to the most immediate request
+    #     """
+    #     lift_targets = self.passengers.passenger_target_scan().rename(
+    #         columns={'target': 'lift_target'}
+    #     )
+    #     return self.find_furthest_floor(lift_targets)
+    
+    # # to test
+    # def find_furthest_floor(self, targets):
+    #     if targets.shape[0] == 0:
+    #         return None
+    #     if self.dir == 'U':
+    #         return targets.lift_target.max()
+    #     elif self.dir == 'D':
+    #         return targets.lift_target.min()
+        
+    # # to test
+    # def is_beyond_all_targets(self, new_target):
+    #     if self.dir == 'U':
+    #         return new_target > self.furthest_boarded_target()
+    #     elif self.dir == 'D':
+    #         return new_target < self.furthest_boarded_target()
         
     def is_within_next_target(self, current_floor, current_target, dir, proposed_target, proposed_dir):
         "assumes current move is for existing passengers, not a preempting move"
@@ -426,15 +463,15 @@ class Lift:
             return False
         if dir == 'U':
             return (
-                current_target > current_floor
+                current_target.height > current_floor.height
             ) and (
-                proposed_target < current_target
+                proposed_target.height < current_target.height
             )
         elif dir == 'D':
             return (
-                current_target < current_floor
+                current_target.height < current_floor.height
             ) and (
-                proposed_target > current_target
+                proposed_target.height > current_target.height
             )
         return False
     
