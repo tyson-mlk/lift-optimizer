@@ -19,6 +19,22 @@ class FloorList:
     
     def list_floors(self):
         return list(self.dict.keys())
+    
+    def floor_height_lookup(self):
+        return {fn: f.height for fn, f in self.dict.items()}
+    
+    def get_max_height(self):
+        return max([h for f, h in self.floor_height_lookup().items()])
+    
+    def get_min_height(self):
+        return min([h for f, h in self.floor_height_lookup().items()])
+    
+    def floor_height_order(self, floor, dir):
+        if dir == 'U':
+            return self.get_floor(floor).height
+        elif dir == 'D':
+            height_extent = self.get_max_height() - self.get_min_height()
+            return 2 * height_extent - self.get_floor(floor).height
 
 FLOORS = list(str(i).zfill(3) for i in range(20))
 FLOOR_HEIGHTS = {i:float(2+int(i)*3) if i != '000' else 0.0 for i in FLOORS}

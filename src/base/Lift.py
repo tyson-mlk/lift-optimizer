@@ -463,7 +463,7 @@ class Lift:
                 print(f'lift moving to target {next_target}')
                 next_floor = FLOOR_LIST.get_floor(next_target)
                 await self.move(next_floor)
-                await self.loading(print_stats=True)
+                await self.loading(print_lift_stats=True, print_passenger_stats=True)
                 print(f'lift moved to target {self.floor}')
                 next_target = self.next_baseline_target()
                 print(f'lift new next target {next_target}')
@@ -474,6 +474,27 @@ class Lift:
     async def loading(self, print_lift_stats = False, print_passenger_stats=False):
         await self.offboard_arrived()
         await self.onboard_earliest_arrival()
+        PASSENGERS.update_passenger_metrics(print_passenger_stats, FLOOR_LIST)
         if print_lift_stats:
-            print('l1', self.passengers.df.iloc[:,:9])
-        PASSENGERS.update_passenger_metrics(print_passenger_stats)
+            self.pprint_current_passengers()
+
+    def pprint_current_passengers(self):
+        def passenger_time_format(t):
+            return t.strftime("%H:%M:%S") if t is not pd.NaT else "NA"
+
+        def format_start_time(df):
+            return df.trip_start_time.apply(passenger_time_format)
+
+        def format_board_time(df):
+            return df.board_time.apply(passenger_time_format)
+        
+        df = self.passengers.df.copy()
+        df['start_time'] = format_start_time(df)
+        df['board_time'] = format_board_time(df)
+
+        print_cols = ['source', 'start_time', 'board_time', 'target']
+        print(self.name, 'passengers on-board at', passenger_time_format(datetime.now()))
+        if self.calculate_passenger_count() > 0:
+            print(df.loc[:, print_cols])
+        else:
+            print('lift empty')

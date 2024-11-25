@@ -1,7 +1,6 @@
 import pandas as pd
 from datetime import datetime
 from logging import INFO, DEBUG
-from threading import Thread
 from asyncio import Queue
 
 from utils.Logging import get_logger
@@ -19,9 +18,9 @@ class PassengerList:
         'trip_start_time': 'datetime64[ns]',
         'board_time': 'datetime64[ns]',
         'dest_arrival_time': 'datetime64[ns]',
-        'travel_time': 'float64',
-        'waiting_time': 'float64',
-        'time_on_lift': 'float64'
+        'travel_time': 'Float64',
+        'waiting_time': 'Float64',
+        'time_on_lift': 'Float64'
     }
 
     def __init__(self, passenger_list_df = None, p_list_name = None, lift_tracking = False):
@@ -77,13 +76,13 @@ class PassengerList:
                         else None,
                     passenger.travel_time
                         if 'travel_time' in passenger.__dict__.keys()
-                        else float(-1),
+                        else pd.NA,
                     passenger.waiting_time
                         if 'travel_time' in passenger.__dict__.keys()
-                        else float(-1),
+                        else pd.NA,
                     passenger.time_on_lift
                         if 'travel_time' in passenger.__dict__.keys()
-                        else float(-1)
+                        else pd.NA
                 ]
             ],
             columns=PassengerList.schema,
@@ -217,11 +216,62 @@ class PassengerList:
         "scan for all passenger source floors"
         return self.df.loc[:,['source', 'dir']].drop_duplicates()
     
-    def update_passenger_metrics(self, print_passenger_metrics):
+    def update_passenger_metrics(self, print_passenger_metrics,
+                                 floor_list, ordering_type='source'):
         from metrics.TimeMetrics import calculate_all_metrics
 
         self.df = calculate_all_metrics(self).df
         if print_passenger_metrics:
-            print(self.df.iloc[:,:6])
+            self.pprint_passenger_status(floor_list, ordering_type=ordering_type)
+
+    def pprint_passenger_status(self, floor_list, ordering_type='source'):
+        def format_trip(df):
+            return df.source + " -> " + df.target
+
+        df = self.df.copy()
+        assert ordering_type in df.columns
+
+        df['trip'] = format_trip(df)
+        df['order'] = df.apply(lambda x: floor_list.floor_height_order(x[ordering_type], x.dir), axis=1)
+        
+        print( 'All passengers',
+            df.loc[:, ['trip', 'status', 'lift', 'order']] \
+                .sort_values('order').drop(columns='order')
+        )
+
+    def pprint_passenger_details(self, ordering=None):
+        def format_trip(df):
+            return df.source + " -> " + df.target
+
+        def passenger_time_format(t):
+            return t.strftime("%H:%M:%S") if t is not pd.NaT else "NA"
+
+        def format_start_time(df):
+            return df.trip_start_time.apply(passenger_time_format)
+
+        def format_board_time(df):
+            return df.board_time.apply(passenger_time_format)
+
+        def format_dest_arrival_time(df):
+            return df.dest_arrival_time.apply(passenger_time_format)
+        
+        df = self.df.copy()
+        df['trip'] = format_trip(df)
+        df['start_time'] = format_start_time(df)
+        df['board_time'] = format_board_time(df)
+        df['dest_arrival_time'] = format_dest_arrival_time(df)
+        df['waiting_time'] = df.waiting_time.round(2)
+        df['time_on_lift'] = df.time_on_lift.round(2)
+        df['travel_time'] = df.travel_time.round(2)
+
+        print_cols = ['trip', 'status', 'start_time', 'lift', 'board_time', 'current', 'dest_arrival_time',
+                      'waiting_time', 'time_on_lift', 'travel_time']
+        print('all passengers state')
+        if ordering is not None:
+            assert ordering in print_cols
+            print(df.loc[:, print_cols].sort_values(ordering))
+        else:
+            print(df.loc[:, print_cols])
+
 
 PASSENGERS = PassengerList(p_list_name='all passengers', lift_tracking=True)
