@@ -28,9 +28,9 @@ for source in FLOOR_LIST.list_floors():
             dir = 'D'
         key = (source, target, dir)
         if (source == '000') | (target == '000'):
-            trip_arrival_rates[key] = 0.003
+            trip_arrival_rates[key] = 0.03
         else:
-            trip_arrival_rates[key] = 0.0002
+            trip_arrival_rates[key] = 0.002
 
 def increment_counter(counter_type):
     COUNTERS[counter_type] += 1

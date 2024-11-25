@@ -92,7 +92,6 @@ class PassengerList:
             PassengerList.schema
         )
     
-    # to test
     def register_arrivals(self, passenger):
         msg = passenger.source, passenger.target, passenger.dir
         self.arrival_queue.put_nowait(msg)

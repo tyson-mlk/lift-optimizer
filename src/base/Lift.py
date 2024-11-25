@@ -270,7 +270,6 @@ class Lift:
                         if not after_redirect:
                             h, d, v  = self.get_moving_status_from_floor(time_elapsed, current_floor, floor)
                         else:
-                            # TODO: calculate moving status for redirects
                             h, d, v = self.get_moving_status_after_redirect(time_elapsed, moving_status, floor)
                         moving_status = CalcAccelModelMovingStatus(h, d, v, self.model)
                         redirect = self.calc_is_floor_reachable_while_moving(moving_status, new_source)
@@ -283,21 +282,21 @@ class Lift:
                             print('schedule to arrive in', round(time_to_move, 2))
                             after_redirect = True
         except asyncio.TimeoutError:
-            # to test
-            # only one floor with passengers
             if self.floor == floor.name:
-                single_floor_dir = self.find_single_floor()
+                single_floor_dir = self.find_single_passenger_floor()
                 if single_floor_dir is not None:
                     self.dir = single_floor_dir
                 print(self.name, 'direction is', self.dir)
                 self.log(f"{self.name} direction is {self.dir}")
-            if floor.name == self.find_furthest_target():
-                if self.dir == 'D':
-                    self.dir = 'U'
-                elif self.dir == 'U':
-                    self.dir = 'D'
-                print(self.name, 'direction is', self.dir)
-                self.log(f"{self.name} direction is {self.dir}")
+            elif self.dir in ['U', 'D']:
+                furthest_target = self.find_furthest_target()
+                if floor.name == furthest_target[0] and self.dir != furthest_target[1]:
+                    if self.dir == 'D':
+                        self.dir = 'U'
+                    elif self.dir == 'U':
+                        self.dir = 'D'
+                    print(self.name, 'change direction to', self.dir)
+                    self.log(f"{self.name} change direction to {self.dir}")
             
             self.log(
                 f"{self.name}: "
@@ -366,7 +365,6 @@ class Lift:
     def get_moving_status_after_redirect(self, time_elapsed, moving_status, target_floor):
         return moving_status.calc_status(target_floor.height, time_elapsed)
 
-    # to init test
     def calc_time_to_move_from_floor(self, time_elapsed, source_floor, target_floor, proposed_floor):
         assert self.model.model_type == "accel"
 
@@ -377,13 +375,11 @@ class Lift:
 
         return self.calc_time_to_move_while_moving(moving_status, proposed_floor)
     
-    # to init test
     def calc_time_to_move_while_moving(self, moving_status, proposed_floor):
         proposed_floor_height = FLOOR_LIST.get_floor(proposed_floor).height
 
         return moving_status.calc_time(proposed_floor_height)
     
-    # to init test
     def calc_is_floor_reachable_while_moving(self, moving_status, proposed_floor):
         proposed_floor_height = FLOOR_LIST.get_floor(proposed_floor).height
 
@@ -463,9 +459,9 @@ class Lift:
         )
         overall_targets = pd.concat([lift_targets, waiting_targets])
         # print('next baseline target with', overall_targets, 'at dir', self.dir, self.floor)
-        return self.find_furthest_floor(overall_targets)
+        return self.find_furthest_floor_dir(overall_targets)
         
-    def find_single_floor(self):
+    def find_single_passenger_floor(self):
         """
         baseline for lift target algorithm
         attends to the most immediate request
@@ -492,16 +488,23 @@ class Lift:
     #     lift_targets = self.passengers.passenger_target_scan().rename(
     #         columns={'target': 'lift_target'}
     #     )
-    #     return self.find_furthest_floor(lift_targets)
+    #     return self.find_furthest_floor_dir(lift_targets)
     
     # # to test
-    def find_furthest_floor(self, targets):
+    def find_furthest_floor_dir(self, targets):
         if targets.shape[0] == 0:
             return None
         if self.dir == 'U':
-            return targets.lift_target.max()
+            opp_dir = 'D'
+            furthest = targets.lift_target.max()
         elif self.dir == 'D':
-            return targets.lift_target.min()
+            opp_dir = 'U'
+            furthest = targets.lift_target.min()
+        
+        if self.dir in targets.loc[targets.lift_target==furthest, 'dir']:
+            return (furthest, self.dir)
+        else:
+            return (furthest, opp_dir)
         
     # # to test
     # def is_beyond_all_targets(self, new_target):
@@ -550,7 +553,7 @@ class Lift:
         await self.onboard_earliest_arrival()
         if print_stats:
             print('l1', self.passengers.df.iloc[:,:9])
-        PASSENGERS.update_passenger_metrics()
+        # PASSENGERS.update_passenger_metrics()
         if print_stats:
             print('PASSENGERS', PASSENGERS.df.iloc[:,:9] \
                   .sort_values(by=['dir', 'current', 'status', 'trip_start_time']))

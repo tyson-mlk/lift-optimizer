@@ -34,11 +34,9 @@ class Floor:
     def onboard_all(self):
         self.reset_passenger_counter()
 
-    # to test
     def onboard_selected(self, passenger_list):
         self.passengers.complement_passenger_list(passenger_list)
 
-    # to test
     def random_select_passengers(self, capacity, passenger_count):
         return self.passengers.sample_passengers(n=capacity-passenger_count)
     
