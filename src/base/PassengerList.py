@@ -1,6 +1,8 @@
 import pandas as pd
 from datetime import datetime
 from logging import INFO, DEBUG
+from threading import Thread
+from asyncio import Queue
 
 from utils.Logging import get_logger
 from base.Passenger import Passenger
@@ -22,7 +24,14 @@ class PassengerList:
         'time_on_lift': 'float64'
     }
 
-    def __init__(self, passenger_list_df = None, p_list_name = None):
+    def __init__(self, passenger_list_df = None, p_list_name = None, lift_tracking = False):
+        self.name = p_list_name
+        if p_list_name is not None:
+            logger = get_logger(p_list_name, self.__class__.__name__, INFO)
+            self.log = lambda msg: logger.info(msg)
+            self.log(f"{p_list_name}: init")
+        else:
+            self.log = lambda *args: None
         if passenger_list_df is not None:
             self.df: pd.DataFrameType = pd.DataFrame(
                 passenger_list_df,
@@ -37,16 +46,16 @@ class PassengerList:
             ).astype(
                 PassengerList.schema
             )
-        self.name = p_list_name
-        if p_list_name is not None:
-            logger = get_logger(p_list_name, self.__class__.__name__, INFO)
-            self.log = lambda msg: logger.info(msg)
-            self.log(f"{p_list_name}: init")
-        else:
-            self.log = lambda *args: None
+        if lift_tracking:
+            self.arrival_queue = Queue()
 
     def __del__(self):
         self.log(f"{self.name}: destruct")
+
+    async def __aexit__(self, *excinfo):
+        if 'arrival_queue' in self.__dict__.keys():
+            await self.arrival_queue.join()
+
 
     @classmethod
     def passenger_to_df(cls, passenger: Passenger):
@@ -68,13 +77,13 @@ class PassengerList:
                         else None,
                     passenger.travel_time
                         if 'travel_time' in passenger.__dict__.keys()
-                        else -1,
+                        else float(-1),
                     passenger.waiting_time
                         if 'travel_time' in passenger.__dict__.keys()
-                        else -1,
+                        else float(-1),
                     passenger.time_on_lift
                         if 'travel_time' in passenger.__dict__.keys()
-                        else -1
+                        else float(-1)
                 ]
             ],
             columns=PassengerList.schema,
@@ -82,6 +91,10 @@ class PassengerList:
         ).astype(
             PassengerList.schema
         )
+    
+    def register_arrivals(self, passenger):
+        msg = passenger.source, passenger.target, passenger.dir
+        self.arrival_queue.put_nowait(msg)
     
     def count_passengers(self) -> int:
         return self.df.shape[0]
@@ -112,12 +125,8 @@ class PassengerList:
         self.df.loc[passengers.df.index, 'status'] = 'Arrived'
         self.df.loc[passengers.df.index, 'dest_arrival_time'] = datetime.now()
         self.log(
-            f"{self.name}:"
-            f"arrival at destination of {passengers.count_passengers()}"
-        )
-        self.log(
-            f"{self.name}:"
-            f"passenger count is {self.count_traveling_passengers()}"
+            f"{self.name}: completed {passengers.count_passengers()};"
+            f"count is {self.count_traveling_passengers()}"
         )
 
     def add_passenger_list(self, passenger_df: pd.DataFrame):
@@ -126,37 +135,21 @@ class PassengerList:
     def passenger_arrival(self, passenger: Passenger):
         passenger_df = PassengerList.passenger_to_df(passenger)
         self.add_passenger_list(passenger_df)
-        self.log(
-            f"{self.name}:"
-            f"passenger arrival of 1"
-        )
-        self.log(
-            f"{self.name}:"
-            f"passenger count is {self.count_traveling_passengers()}"
-        )
+        self.log(f"{self.name}: 1 new arrival; count is {self.count_traveling_passengers()}")
         
         from base.FloorList import FLOOR_LIST
         floor = FLOOR_LIST.get_floor(passenger.source)
         floor.passengers.add_passenger_list(passenger_df)
-        floor.log(
-            f"{floor.name}:"
-            f"add 1 passenger"
-        )
-        floor.log(
-            f"{floor.name}:"
-            f"passenger count is {floor.passengers.count_passengers()}"
-        )
+        floor.log(f"{floor.name}: 1 new arrival; count is {floor.passengers.count_passengers()}")
+
+        self.register_arrivals(passenger)
 
     def passenger_list_arrival(self, passengers):
         passenger_df = passengers.df
         self.add_passenger_list(passenger_df)
         self.log(
-            f"{self.name}:"
-            f"passenger arrival of {passengers.count_passengers()}"
-        )
-        self.log(
-            f"{self.name}:"
-            f"passenger count is {self.count_traveling_passengers()}"
+            f"{self.name}: {passengers.count_passengers()} new arrival;"
+            f"count is {self.count_traveling_passengers()}"
         )
         
         from base.FloorList import FLOOR_LIST
@@ -166,12 +159,8 @@ class PassengerList:
                 passengers.df.loc[passengers.df.source == floor_name,:]
             )
             floor.log(
-                f"{floor.name}:"
-                f"add {(passengers.df.source == floor_name).sum()} passengers"
-            )
-            floor.log(
-                f"{floor.name}:"
-                f"passenger count is {floor.passengers.count_passengers()}"
+                f"{floor.name}: {(passengers.df.source == floor_name).sum()} new arrival;"
+                f" count is {floor.passengers.count_passengers()}"
             )
 
     def complement_passenger_list(self, passenger_list):
@@ -189,6 +178,10 @@ class PassengerList:
     def filter_by_destination(self, floor: Floor):
         "filters passengers to those on a floor"
         return PassengerList(self.df.loc[self.df.target == floor.name, :])
+
+    def filter_by_direction(self, direction):
+        "filters passengers to those on a floor"
+        return PassengerList(self.df.loc[self.df.dir == direction, :])
     
     def assign_lift(self, lift):
         from base.Lift import Lift
@@ -224,9 +217,11 @@ class PassengerList:
         "scan for all passenger source floors"
         return self.df.loc[:,['source', 'dir']].drop_duplicates()
     
-    def update_passenger_metrics(self):
+    def update_passenger_metrics(self, print_passenger_metrics):
         from metrics.TimeMetrics import calculate_all_metrics
 
         self.df = calculate_all_metrics(self).df
+        if print_passenger_metrics:
+            print(self.df.iloc[:,:6])
 
-PASSENGERS = PassengerList(p_list_name='all passengers')
+PASSENGERS = PassengerList(p_list_name='all passengers', lift_tracking=True)

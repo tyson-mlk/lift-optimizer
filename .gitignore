@@ -3,3 +3,5 @@
 *.py[cod]
 .pytest_cache/
 logs/
+*.csv
+*.xlsx

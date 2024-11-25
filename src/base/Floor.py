@@ -24,6 +24,9 @@ class Floor:
     
     def get_floor_count(self):
         return self.passengers.count_passengers()
+    
+    def get_floor_passenger_count_with_dir(self, direction):
+        return self.passengers.filter_by_direction(direction).count_passengers()
 
     def reset_passenger_counter(self):
         self.passengers.remove_all_passengers()
@@ -31,14 +34,16 @@ class Floor:
     def onboard_all(self):
         self.reset_passenger_counter()
 
-    # to test
     def onboard_selected(self, passenger_list):
         self.passengers.complement_passenger_list(passenger_list)
 
-    # to test
     def random_select_passengers(self, capacity, passenger_count):
         return self.passengers.sample_passengers(n=capacity-passenger_count)
     
-    def select_passengers_by_earliest_arrival(self, capacity, passenger_count):
+    def select_passengers_with_dir_by_earliest_arrival(self, lift_dir, capacity, passenger_count):
         num_to_board = capacity - passenger_count
-        return self.passengers.df.sort_values('trip_start_time').head(num_to_board)
+        passenger_df = self.passengers.df
+        print('DEBUG onboard selection', passenger_df.loc[passenger_df.dir == lift_dir, :] \
+            .sort_values('trip_start_time'))
+        return passenger_df.loc[passenger_df.dir == lift_dir, :] \
+            .sort_values('trip_start_time').head(num_to_board)
