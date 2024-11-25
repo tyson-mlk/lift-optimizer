@@ -78,6 +78,7 @@ async def cont_exp_gen(trip, rate=1.0):
             start_time = datetime.now()
             await exp_gen(rate=rate)
             passenger_arrival(source_floor, target_floor, datetime.now())
+            increment_counter(trip)
             end_time = datetime.now()
             # for logging
             print('trip', trip, 'rate ', rate, 'generated taking', end_time-start_time)
