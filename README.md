@@ -8,9 +8,6 @@ lift optimization dev
 ![Transition Diagram](StateDiagram.png "Lift State Transitions")
 
 ## TODO:
-- setup lifts to respond to passenger requests while moving
-- use async for lift movement and boarding
-
 - add live visualizer for multi-floor and multi-lift with passenger counts
 
 - evaluate travel time

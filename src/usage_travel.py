@@ -3,6 +3,7 @@
 import base
 from datetime import datetime
 import pandas as pd
+import asyncio
 
 p_list = base.PassengerList.PASSENGERS
 p1 = base.Passenger.Passenger('000', '010', datetime.now())
@@ -26,102 +27,72 @@ pa10 = tenth.passengers
 
 l1 = base.Lift.Lift('l1', '000', 'U')
 
-print('A', l1.name, l1.passengers.df, p_list.df) # Floor 0
+def print_status(prefix, lift):
+    print(f"{prefix}. Lift {lift.name} at floor {lift.floor} with {lift.passengers.count_passengers()} passengers on-board")
 
-l1.offboard_arrived()
-# l1.onboard_random_available()
-l1.onboard_earliest_arrival()
+async def main():
+    print_status('A', l1) # Floor 0
+    await l1.loading(print_lift_stats = True, print_passenger_stats=True)
 
-p_list.update_passenger_metrics()
+    print_status('B', l1) # Floor 0
 
-# to use async
-# await l1.loading()
+    lift_target = f_list.get_floor(l1.next_baseline_target())
+    l1.manual_move(lift_target)
 
-print('B', l1.name, l1.passengers.df, p_list.df) # Floor 0
+    p_list.passenger_arrival(base.Passenger.Passenger('004', '000', datetime.now()))
+    p_list.passenger_arrival(base.Passenger.Passenger('008', '010', datetime.now()))
 
-lift_target = f_list.get_floor(l1.next_baseline_target())
-l1.move(lift_target)
+    await l1.loading(print_lift_stats = True, print_passenger_stats=True)
 
-l1.offboard_arrived()
-# l1.onboard_random_available()
-l1.onboard_earliest_arrival()
+    print_status('C', l1) # Floor 2
 
-p_list.passenger_arrival(base.Passenger.Passenger('004', '000', datetime.now()))
-p_list.passenger_arrival(base.Passenger.Passenger('008', '010', datetime.now()))
+    lift_target = f_list.get_floor(l1.next_baseline_target())
+    l1.manual_move(lift_target)
 
-p_list.update_passenger_metrics()
+    await l1.loading(print_lift_stats = True, print_passenger_stats=True)
 
-print('C', l1.name, l1.passengers.df, p_list.df) # Floor 2
+    print_status('D',  l1) # Floor 8
 
-lift_target = f_list.get_floor(l1.next_baseline_target())
-l1.move(lift_target)
+    lift_target = f_list.get_floor(l1.next_baseline_target())
+    l1.manual_move(lift_target)
 
-l1.offboard_arrived()
-# l1.onboard_random_available()
-l1.onboard_earliest_arrival()
+    p_list.passenger_arrival(base.Passenger.Passenger('008', '011', datetime.now()))
 
-p_list.update_passenger_metrics()
+    await l1.loading(print_lift_stats = True, print_passenger_stats=True)
 
-print('D',  l1.name, l1.passengers.df, p_list.df) # Floor 8
+    print_status('E',  l1) # Floor 10
 
-lift_target = f_list.get_floor(l1.next_baseline_target())
-l1.move(lift_target)
+    lift_target = f_list.get_floor(l1.next_baseline_target())
+    l1.manual_move(lift_target)
 
-l1.offboard_arrived()
-# l1.onboard_random_available()
-l1.onboard_earliest_arrival()
+    p_list.passenger_arrival(base.Passenger.Passenger('001', '005', datetime.now()))
 
-p_list.passenger_arrival(base.Passenger.Passenger('008', '011', datetime.now()))
+    await l1.loading(print_lift_stats = True, print_passenger_stats=True)
 
-p_list.update_passenger_metrics()
+    print_status('F',  l1) # Floor 4
 
-print('E',  l1.name, l1.passengers.df, p_list.df) # Floor 10
+    lift_target = f_list.get_floor(l1.next_baseline_target())
+    l1.manual_move(lift_target)
 
-lift_target = f_list.get_floor(l1.next_baseline_target())
-l1.move(lift_target)
+    await l1.loading(print_lift_stats = True, print_passenger_stats=True)
 
-l1.offboard_arrived()
-# l1.onboard_random_available()
-l1.onboard_earliest_arrival()
+    print_status('G',  l1) # Floor 0
 
-p_list.passenger_arrival(base.Passenger.Passenger('001', '005', datetime.now()))
+    lift_target = f_list.get_floor(l1.next_baseline_target())
+    l1.manual_move(lift_target)
 
-p_list.update_passenger_metrics()
+    await l1.loading(print_lift_stats = True, print_passenger_stats=True)
 
-print('F',  l1.name, l1.passengers.df, p_list.df) # Floor 4
+    print_status('H',  l1) # Floor 1
 
-lift_target = f_list.get_floor(l1.next_baseline_target())
-l1.move(lift_target)
+    lift_target = f_list.get_floor(l1.next_baseline_target())
+    l1.manual_move(lift_target)
+    
+    await l1.loading(print_lift_stats = True, print_passenger_stats=True)
 
-l1.offboard_arrived()
-# l1.onboard_random_available()
-l1.onboard_earliest_arrival()
+    print_status('I',  l1) # Floor 5
 
-p_list.update_passenger_metrics()
-
-print('G',  l1.name, l1.passengers.df, p_list.df) # Floor 0
-
-lift_target = f_list.get_floor(l1.next_baseline_target())
-l1.move(lift_target)
-
-l1.offboard_arrived()
-# l1.onboard_random_available()
-l1.onboard_earliest_arrival()
-
-p_list.update_passenger_metrics()
-
-print('H',  l1.name, l1.passengers.df, p_list.df) # Floor 1
-
-lift_target = f_list.get_floor(l1.next_baseline_target())
-l1.move(lift_target)
-
-l1.offboard_arrived()
-# l1.onboard_random_available()
-l1.onboard_earliest_arrival()
-
-p_list.update_passenger_metrics()
-
-print('I',  l1.name, l1.passengers.df, p_list.df) # Floor 5
+asyncio.run(main())
 
 # p_list.df
 # l1.passengers.df
