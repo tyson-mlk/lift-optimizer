@@ -126,25 +126,25 @@ class CalcAccelModelMovingStatus:
                     dist = self.spec.a * (time_elapsed - trans_time) ** 2 / 2
                     h = trans_height + dist * height_mult
                     return h, direction, v
-                if time_elapsed - trans_time <= LiftSpec.accel_model_time(distance_to_cont) - self.spec.get_time_to_max():
+                if time_elapsed - trans_time <= self.spec.calc_time(distance_to_cont) - self.spec.get_time_to_max():
                     time_at_max = (time_elapsed - trans_time) - LiftSpec.get_time_to_max()
                     dist = LiftSpec.get_accel_dist() + time_at_max * self.spec.max_v
                     h = trans_height + dist * height_mult
                     return h, direction, self.spec.max_v
                 else:
-                    time_remain =  LiftSpec.accel_model_time(distance_to_cont) - (time_elapsed - trans_time)
+                    time_remain =  self.spec.calc_time(distance_to_cont) - (time_elapsed - trans_time)
                     v = time_remain * self.spec.a
                     dist = distance_to_cont - self.spec.a * time_remain ** 2 / 2
                     h = trans_height + dist * height_mult
                     return h, direction, v
             else:
-                if time_elapsed - trans_time <= LiftSpec.accel_model_time(distance_to_cont) / 2:
-                    v = time_elapsed * self.spec.a
+                if time_elapsed - trans_time <= self.spec.calc_time(distance_to_cont) / 2:
+                    v = (time_elapsed - trans_time) * self.spec.a
                     dist = self.spec.a * (time_elapsed - trans_time) ** 2 / 2
                     h = trans_height + dist * height_mult
                     return h, direction, v
                 else:
-                    time_remain = LiftSpec.accel_model_time(distance_to_cont) - (time_elapsed - trans_time)
+                    time_remain = self.spec.calc_time(distance_to_cont) - (time_elapsed - trans_time)
                     v = time_remain * self.spec.a
                     dist = distance_to_cont - self.spec.a * time_remain ** 2 / 2
                     h = trans_height + dist * height_mult
