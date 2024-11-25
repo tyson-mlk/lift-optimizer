@@ -1,4 +1,6 @@
 from logging import INFO, DEBUG
+from datetime import datetime
+from pandas import NaT
 
 from utils.Logging import get_logger
 
@@ -47,3 +49,26 @@ class Floor:
             .sort_values('trip_start_time'))
         return passenger_df.loc[passenger_df.dir == lift_dir, :] \
             .sort_values('trip_start_time').head(num_to_board)
+    
+    def pprint_floor_passengers(self, ordering='start_time'):
+        def passenger_time_format(t):
+            return t.strftime("%H:%M:%S") if t is not NaT else "NA"
+
+        def format_start_time(df):
+            return df.trip_start_time.apply(passenger_time_format)
+        
+        def format_trip(df):
+            return df.source + " -> " + df.target
+        
+        df = self.passengers.df.copy()
+        
+        df['trip'] = format_trip(df)
+        df['start_time'] = format_start_time(df)
+
+        print_cols = ['trip', 'dir', 'start_time']
+        print('Floor', self.name, 'passengers waiting at', passenger_time_format(datetime.now()))
+        if self.passengers.count_passengers() > 0:
+            print(df.loc[:, print_cols].sort_values(ordering))
+        else:
+            print('floor empty')
+
