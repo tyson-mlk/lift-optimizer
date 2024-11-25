@@ -77,13 +77,13 @@ class PassengerList:
                         else None,
                     passenger.travel_time
                         if 'travel_time' in passenger.__dict__.keys()
-                        else -1,
+                        else float(-1),
                     passenger.waiting_time
                         if 'travel_time' in passenger.__dict__.keys()
-                        else -1,
+                        else float(-1),
                     passenger.time_on_lift
                         if 'travel_time' in passenger.__dict__.keys()
-                        else -1
+                        else float(-1)
                 ]
             ],
             columns=PassengerList.schema,

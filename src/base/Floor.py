@@ -46,6 +46,6 @@ class Floor:
         num_to_board = capacity - passenger_count
         passenger_df = self.passengers.df
         print('DEBUG onboard selection', passenger_df.loc[passenger_df.dir == lift_dir, :] \
-            .sort_values('trip_start_time').head(num_to_board))
+            .sort_values('trip_start_time'))
         return passenger_df.loc[passenger_df.dir == lift_dir, :] \
             .sort_values('trip_start_time').head(num_to_board)

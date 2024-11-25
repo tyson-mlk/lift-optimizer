@@ -28,9 +28,9 @@ for source in FLOOR_LIST.list_floors():
             dir = 'D'
         key = (source, target, dir)
         if (source == '000') | (target == '000'):
-            trip_arrival_rates[key] = 0.005
+            trip_arrival_rates[key] = 0.003
         else:
-            trip_arrival_rates[key] = 0.001
+            trip_arrival_rates[key] = 0.0002
 
 def increment_counter(counter_type):
     COUNTERS[counter_type] += 1
@@ -52,9 +52,8 @@ async def cont_exp_gen(trip, rate=1.0):
         while True:
             await exp_gen(rate=rate)
             passenger_arrival(source_floor, target_floor, datetime.now())
-            # for logging
-            if target_floor > source_floor:
-                print('passenger arrived from', trip[0], 'moving', trip[2], 'to', trip[1])
+            # for debugging
+            # print('passenger arrived from', trip[0], 'moving', trip[2], 'to', trip[1])
             await asyncio.sleep(0)
     except MemoryError:
         print('memory error')
@@ -74,7 +73,7 @@ async def lift_operation():
     await task
 
 async def main():
-    timeout = 120
+    timeout = 500
     start_time = datetime.now()
     start_time.hour
     try:
@@ -84,7 +83,3 @@ async def main():
         print('timeout: save passengers to file')
         PASSENGERS.df.sort_values(['status', 'dir', 'source', 'trip_start_time']) \
             .to_csv(f'./PASimOneLift_{start_time.hour:02}_{start_time.minute:02}_{start_time.second:02}.csv')
-
-if __name__ == "__main__":
-    # TODO: nothing is run with main()
-    asyncio.run(main())

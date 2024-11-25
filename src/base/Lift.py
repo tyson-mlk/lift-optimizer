@@ -283,11 +283,21 @@ class Lift:
                             print('schedule to arrive in', round(time_to_move, 2))
                             after_redirect = True
         except asyncio.TimeoutError:
+            # to test
+            # only one floor with passengers
+            if self.floor == floor.name:
+                single_floor_dir = self.find_single_floor()
+                if single_floor_dir is not None:
+                    self.dir = single_floor_dir
+                print(self.name, 'direction is', self.dir)
+                self.log(f"{self.name} direction is {self.dir}")
             if floor.name == self.find_furthest_target():
                 if self.dir == 'D':
                     self.dir = 'U'
                 elif self.dir == 'U':
                     self.dir = 'D'
+                print(self.name, 'direction is', self.dir)
+                self.log(f"{self.name} direction is {self.dir}")
             
             self.log(
                 f"{self.name}: "
@@ -454,6 +464,24 @@ class Lift:
         overall_targets = pd.concat([lift_targets, waiting_targets])
         # print('next baseline target with', overall_targets, 'at dir', self.dir, self.floor)
         return self.find_furthest_floor(overall_targets)
+        
+    def find_single_floor(self):
+        """
+        baseline for lift target algorithm
+        attends to the most immediate request
+        """
+        lift_targets = self.passengers.passenger_target_scan().rename(
+            columns={'target': 'lift_target'}
+        )
+        passengers_in_wait = PassengerList(PASSENGERS.df.loc[PASSENGERS.df.lift == 'Unassigned', :])
+        waiting_targets = passengers_in_wait.passenger_source_scan().rename(
+            columns={'source': 'lift_target'}
+        )
+        overall_targets = pd.concat([lift_targets, waiting_targets])
+        if overall_targets.shape[0] == 1:
+            return overall_targets.iloc[0].dir
+        else:
+            return None
     
     # # to test
     # def furthest_boarded_target(self):
