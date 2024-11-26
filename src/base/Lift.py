@@ -454,12 +454,34 @@ class Lift:
             )
         return False
     
+    # to init test
+    def assign_passengers(self, target_floor, allow_multi_assignment=True):
+        furthest_floor, furthest_dir = self.find_furthest_target()
+        if furthest_floor == target_floor and furthest_dir != self.dir:
+            search_dir = 'D' if self.dir == 'U' else 'U'
+        else:
+            search_dir = self.dir
+        if allow_multi_assignment:
+            PASSENGERS \
+                .filter_by_floor(FLOOR_LIST.get_floor(target_floor)) \
+                .filter_by_direction(search_dir) \
+                .assign_lift(self)
+        else:
+            PASSENGERS \
+                .filter_by_floor(FLOOR_LIST.get_floor(target_floor)) \
+                .filter_by_direction(search_dir) \
+                .filter_by_lift_unassigned() \
+                .assign_lift(self)
+    
+    # to test changes
     async def lift_baseline_operation(self):
         print('start baseline operation')
         next_target = self.next_baseline_target()
         print(f'lift next target {next_target}')
         while True:
             if next_target is not None:
+                # baseline allows multi assignment after floor is chosen
+                self.assign_passengers(next_target)
                 print(f'lift moving to target {next_target}')
                 next_floor = FLOOR_LIST.get_floor(next_target)
                 await self.move(next_floor)

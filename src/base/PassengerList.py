@@ -181,12 +181,34 @@ class PassengerList:
     def filter_by_direction(self, direction):
         "filters passengers to those on a floor"
         return PassengerList(self.df.loc[self.df.dir == direction, :])
+
+    # to init test
+    def filter_by_lift_assigned(self, lift_name):
+        "filters passengers to those assigned to a lift"
+        def lift_filter_condition(assignment_condition, lift_name):
+            return lift_name == assignment_condition or lift_name in assignment_condition
+        filter_condition = self.df.loc[:,'lift'].apply(lambda x: lift_filter_condition(x, lift_name))
+        return PassengerList(self.df.loc[filter_condition, :])
+
+    def filter_by_lift_unassigned(self):
+        "filters passengers to those not assigned to a lift"
+        return PassengerList(self.df.loc[self.df.lift == 'Unassigned', :])
     
-    def assign_lift(self, lift):
+    # to init test
+    def assign_lift(self, lift, allow_multi_assignment=True):
         from base.Lift import Lift
 
         assert type(lift) is Lift
-        self.df.loc[:, 'lift'] = lift.name
+        if allow_multi_assignment:
+            def append_lift(existing_assignment, lift_name):
+                if type(existing_assignment) is list:
+                    return existing_assignment + [lift_name]
+                else:
+                    return [existing_assignment] + [lift_name]
+            self.df.loc[self.df.lift != 'Unassigned', 'lift'].apply(lambda x: append_lift(x, lift.name))
+            self.df.loc[self.df.lift == 'Unassigned', 'lift'] = lift.name
+        else:
+            self.df.loc[:, 'lift'] = lift.name
     
     def assign_lift_for_floor(self, lift, floor):
         from base.Lift import Lift
@@ -232,6 +254,7 @@ class PassengerList:
         assert ordering_type in df.columns
 
         df['trip'] = format_trip(df)
+        # TODO: floor height ordering to work differently for source, target and current
         df['order'] = df.apply(lambda x: floor_list.floor_height_order(x[ordering_type], x.dir), axis=1)
         
         print( 'All passengers',
