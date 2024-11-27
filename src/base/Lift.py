@@ -50,41 +50,66 @@ class Lift:
     def has_capacity(self):
         return self.passenger_count < self.capacity
 
+    # to init test
     def has_floor_capacity(self, direction):
         floor_count = self.get_current_floor().get_floor_passenger_count_with_dir(direction)
         return self.passenger_count + floor_count <= self.capacity
+    
+    # to init test
+    def has_capacity_for(self, passenger_selection):
+        return self.passenger_count + passenger_selection.count_passengers() <= self.capacity
 
-    async def onboard_all(self):
+    # to test
+    async def onboard_all(self, bypass_prev_assignment=True):
+        """onboard all passengers on the same floor without regarding lift capacity"""
         floor = self.get_current_floor()
-        PASSENGERS.assign_lift_for_floor(self, floor)
-        PASSENGERS.board(PASSENGERS.filter_by_floor(floor))
+        # assign lift
+        if bypass_prev_assignment:
+            passengers_to_assign = PASSENGERS.filter_by_floor(floor)
+            PASSENGERS.assign_lift_for_floor(passengers_to_assign, floor)
+        else:
+            passengers_to_assign = PASSENGERS.filter_by_floor(floor) \
+                .filter_by_lift_assigned(self.name)
+            passengers_to_assign.assign_lift(self, allow_multi_assignment=False)
+        # board
+        PASSENGERS.board(passengers_to_assign.filter_by_floor(floor))
+        num_to_onboard = passengers_to_assign.count_passengers()
+        if num_to_onboard == 0:
+            return None
 
         from metrics.BoardingTime import boarding_time
 
-        num_to_onboard = floor.passengers.count_passengers()
-        if num_to_onboard == 0:
-            return None
+        # wait boarding time
         time_to_onboard = boarding_time(self, self.passenger_count, 0, num_to_onboard)
         if time_to_onboard > 0:
             self.detail_log(f'onboarding {num_to_onboard} passengers takes {time_to_onboard} s')
             await asyncio.sleep(time_to_onboard)
 
         self.log(f"{self.name}: Onboarding {num_to_onboard} passengers at floor {floor.name}")
-        self.passengers.bulk_add_passengers(floor.passengers)
+        self.passengers.bulk_add_passengers(passengers_to_assign)
         self.passengers.assign_lift(self)
-        self.passengers.board(floor.passengers)
-        floor.onboard_all()
+        self.passengers.board(passengers_to_assign)
+        floor.onboard_selected(passengers_to_assign)
         floor.log(f"{floor.name}: {num_to_onboard} passengers boarded")
         floor.log(f"{floor.name}: passenger count is {floor.passengers.count_passengers()}")
         self.calculate_passenger_count()
         self.log(f"{self.name}: Updated passenger count {self.passenger_count}")
 
-    async def onboard_random_available(self):
+    # to test
+    async def onboard_random_available(self, bypass_prev_assignment=True):
+        "onboards passengers on the same floor by random if capacity is insufficient"
         floor = FLOOR_LIST.get_floor(self.floor)
-        if self.has_floor_capacity(self.dir):
-            selection = floor.passengers.df
+        if bypass_prev_assignment:
+            eligible_passengers = PASSENGERS.filter_by_floor(floor) \
+                .filter_by_direction(self.dir)
         else:
-            selection = floor.random_select_passengers(self.capacity, self.passenger_count)
+            eligible_passengers = PASSENGERS.filter_by_floor(floor) \
+                .filter_by_direction(self.dir) \
+                .filter_by_lift_assigned_not_to_other_only(self.name)
+        if self.has_capacity_for(eligible_passengers):
+            selection = eligible_passengers
+        else:
+            selection = eligible_passengers.sample_passengers(self.capacity - self.passenger_count)
         passenger_list = PassengerList(selection)
 
         from metrics.BoardingTime import boarding_time
@@ -109,15 +134,25 @@ class Lift:
         self.calculate_passenger_count()
         self.log(f"{self.name}: Updated passenger count {self.passenger_count}")
 
-    async def onboard_earliest_arrival(self):
+    # to test
+    async def onboard_earliest_arrival(self, bypass_prev_assignment=True):
+        "onboards passengers on the same floor by earliest assignment if capacity is insufficient"
         floor = FLOOR_LIST.get_floor(self.floor)
-        if self.has_floor_capacity(self.dir):
-            selection = floor.passengers.filter_by_direction(self.dir).df
+        if bypass_prev_assignment:
+            eligible_passengers = PASSENGERS.filter_by_floor(floor) \
+                .filter_by_direction(self.dir)
         else:
-            selection = floor.select_passengers_with_dir_by_earliest_arrival(self.dir, self.capacity, self.passenger_count)
+            eligible_passengers = PASSENGERS.filter_by_floor(floor) \
+                .filter_by_direction(self.dir) \
+                .filter_by_lift_assigned_not_to_other_only(self.name)
+        if self.has_capacity_for(eligible_passengers):
+            selection = eligible_passengers
+        else:
+            selection = eligible_passengers.filter_by_earliest_arrival(
+                self.dir, self.capacity - self.passenger_count
+            )
         passenger_list = PassengerList(selection)
 
-        import time
         from metrics.BoardingTime import boarding_time
 
         num_to_onboard = passenger_list.count_passengers()
@@ -236,12 +271,9 @@ class Lift:
                     print(self.name, 'lone floor directed to', self.dir)
                     self.log(f"{self.name}: lone floor directed to {self.dir}")
             elif self.dir in ['U', 'D']:
-                furthest_target = self.find_furthest_target()
-                if floor.name == furthest_target[0] and self.dir != furthest_target[1]:
-                    if self.dir == 'D':
-                        self.dir = 'U'
-                    elif self.dir == 'U':
-                        self.dir = 'D'
+                furthest_target, furthest_dir = self.find_furthest_target()
+                if floor.name == furthest_target and self.dir != furthest_dir:
+                    self.dir = furthest_dir
                     print(self.name, 'maximal floor turn back to', self.dir)
                     self.log(f"{self.name}: maximal floor turn back to {self.dir}")
             
@@ -275,12 +307,9 @@ class Lift:
                 self.dir = single_floor_dir
                 self.log(f"{self.name}: lone floor directed to {self.dir}")
         elif self.dir in ['U', 'D']:
-            furthest_target = self.find_furthest_target()
-            if floor.name == furthest_target[0] and self.dir != furthest_target[1]:
-                if self.dir == 'D':
-                    self.dir = 'U'
-                elif self.dir == 'U':
-                    self.dir = 'D'
+            furthest_target, furthest_dir = self.find_furthest_target()
+            if floor.name == furthest_target and self.dir != furthest_dir:
+                self.dir = furthest_dir
                 self.log(f"{self.name}: maximal floor turn back to {self.dir}")
         
         self.floor = floor.name
@@ -387,7 +416,7 @@ class Lift:
 
             return targets.lift_target.max()
         
-    def find_furthest_target(self):
+    def find_furthest_target_dir(self):
         """
         baseline for lift target algorithm
         attends to the most immediate request
@@ -400,7 +429,6 @@ class Lift:
             columns={'source': 'lift_target'}
         )
         overall_targets = pd.concat([lift_targets, waiting_targets])
-        # print('next baseline target with', overall_targets, 'at dir', self.dir, self.floor)
         return self.find_furthest_floor_dir(overall_targets)
         
     def find_single_passenger_floor(self):
@@ -456,7 +484,7 @@ class Lift:
     
     # to init test
     def assign_passengers(self, target_floor, allow_multi_assignment=True):
-        furthest_floor, furthest_dir = self.find_furthest_target()
+        furthest_floor, furthest_dir = self.find_furthest_target_dir()
         if furthest_floor == target_floor and furthest_dir != self.dir:
             search_dir = 'D' if self.dir == 'U' else 'U'
         else:

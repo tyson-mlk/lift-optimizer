@@ -195,6 +195,30 @@ class PassengerList:
         return PassengerList(self.df.loc[self.df.lift == 'Unassigned', :])
     
     # to init test
+    def filter_by_lift_assigned_not_to_other_only(self, lift_name):
+        "filters passengers to those assigned to this or not assigned to other lift"
+        def lift_filter_condition(assignment_condition, lift_name):
+            return (
+                type(assignment_condition) is str and
+                assignment_condition == lift_name
+            ) or (
+                type(assignment_condition) is list and
+                (
+                    lift_name in assignment_condition or
+                    len(assignment_condition) == 0
+                )
+            )
+        filter_condition = self.df.loc[:,'lift'].apply(lambda x: lift_filter_condition(x, lift_name))
+        return PassengerList(self.df.loc[filter_condition, :])
+    
+    def filter_by_earliest_arrival(self, dir, n):
+        passenger_df = self.passengers.df
+        print('DEBUG onboard selection', passenger_df.loc[passenger_df.dir == dir, :] \
+            .sort_values('trip_start_time'))
+        return passenger_df.loc[passenger_df.dir == dir, :] \
+            .sort_values('trip_start_time').head(n)
+    
+    # to init test
     def assign_lift(self, lift, allow_multi_assignment=True):
         from base.Lift import Lift
 

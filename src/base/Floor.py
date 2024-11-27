@@ -39,16 +39,16 @@ class Floor:
     def onboard_selected(self, passenger_list):
         self.passengers.complement_passenger_list(passenger_list)
 
-    def random_select_passengers(self, capacity, passenger_count):
-        return self.passengers.sample_passengers(n=capacity-passenger_count)
+    # def random_select_passengers(self, capacity, passenger_count):
+    #     return self.passengers.sample_passengers(n=capacity-passenger_count)
     
-    def select_passengers_with_dir_by_earliest_arrival(self, lift_dir, capacity, passenger_count):
-        num_to_board = capacity - passenger_count
-        passenger_df = self.passengers.df
-        print('DEBUG onboard selection', passenger_df.loc[passenger_df.dir == lift_dir, :] \
-            .sort_values('trip_start_time'))
-        return passenger_df.loc[passenger_df.dir == lift_dir, :] \
-            .sort_values('trip_start_time').head(num_to_board)
+    # def select_passengers_with_dir_by_earliest_arrival(self, lift_dir, capacity, passenger_count):
+    #     num_to_board = capacity - passenger_count
+    #     passenger_df = self.passengers.df
+    #     print('DEBUG onboard selection', passenger_df.loc[passenger_df.dir == lift_dir, :] \
+    #         .sort_values('trip_start_time'))
+    #     return passenger_df.loc[passenger_df.dir == lift_dir, :] \
+    #         .sort_values('trip_start_time').head(num_to_board)
     
     def pprint_floor_passengers(self, ordering='start_time'):
         def passenger_time_format(t):
