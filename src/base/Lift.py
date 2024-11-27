@@ -70,7 +70,7 @@ class Lift:
         else:
             passengers_to_assign = PASSENGERS.filter_by_floor(floor) \
                 .filter_by_lift_assigned(self.name)
-            passengers_to_assign.assign_lift(self, allow_multi_assignment=False)
+            PASSENGERS.assign_lift_for_selection(self, passengers_to_assign)
         # board
         PASSENGERS.board(passengers_to_assign.filter_by_floor(floor))
         num_to_onboard = passengers_to_assign.count_passengers()
@@ -490,16 +490,16 @@ class Lift:
         else:
             search_dir = self.dir
         if allow_multi_assignment:
-            PASSENGERS \
+            passenger_list = PASSENGERS \
                 .filter_by_floor(FLOOR_LIST.get_floor(target_floor)) \
-                .filter_by_direction(search_dir) \
-                .assign_lift(self)
+                .filter_by_direction(search_dir)
+            PASSENGERS.assign_lift_for_selection(self, passenger_list)
         else:
-            PASSENGERS \
+            passenger_list = PASSENGERS \
                 .filter_by_floor(FLOOR_LIST.get_floor(target_floor)) \
                 .filter_by_direction(search_dir) \
-                .filter_by_lift_unassigned() \
-                .assign_lift(self)
+                .filter_by_lift_unassigned()
+            PASSENGERS.assign_lift_for_selection(self, passenger_list)
     
     # to test changes
     async def lift_baseline_operation(self):

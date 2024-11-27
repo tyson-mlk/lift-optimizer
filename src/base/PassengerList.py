@@ -218,35 +218,55 @@ class PassengerList:
         return passenger_df.loc[passenger_df.dir == dir, :] \
             .sort_values('trip_start_time').head(n)
     
-    # to init test
+    @classmethod
+    def append_lift(cls, existing_assignment, lift_name):
+        if type(existing_assignment) is list:
+            if lift_name in existing_assignment:
+                return existing_assignment
+            return existing_assignment + [lift_name]
+        else:
+            if existing_assignment == 'Unassigned':
+                return lift_name
+            elif lift_name != existing_assignment:
+                return [existing_assignment] + [lift_name]
+            else:
+                return existing_assignment
+    
     def assign_lift(self, lift, allow_multi_assignment=True):
         from base.Lift import Lift
 
         assert type(lift) is Lift
         if allow_multi_assignment:
-            def append_lift(existing_assignment, lift_name):
-                if type(existing_assignment) is list:
-                    return existing_assignment + [lift_name]
-                else:
-                    return [existing_assignment] + [lift_name]
-            self.df.loc[self.df.lift != 'Unassigned', 'lift'].apply(lambda x: append_lift(x, lift.name))
+            self.df.loc[self.df.lift != 'Unassigned', 'lift'] = \
+                self.df.loc[self.df.lift != 'Unassigned', 'lift'] \
+                .apply(lambda x: PassengerList.append_lift(x, lift.name))
             self.df.loc[self.df.lift == 'Unassigned', 'lift'] = lift.name
         else:
             self.df.loc[:, 'lift'] = lift.name
     
-    def assign_lift_for_floor(self, lift, floor):
+    def assign_lift_for_floor(self, lift, floor, allow_multi_assignment=True):
         from base.Lift import Lift
 
         assert type(lift) is Lift
         assert type(floor) is Floor
-        self.df.loc[self.df.source==floor.name, 'lift'] = lift.name
+        if allow_multi_assignment:
+            self.df.loc[self.df.source==floor.name, 'lift'] = \
+                self.df.loc[self.df.source==floor.name, 'lift'] \
+                .apply(lambda x: PassengerList.append_lift(x, lift.name))
+        else:
+            self.df.loc[self.df.source==floor.name, 'lift'] = lift.name
     
-    def assign_lift_for_selection(self, lift, passenger_list):
+    def assign_lift_for_selection(self, lift, passenger_list, allow_multi_assignment=True):
         from base.Lift import Lift
 
         assert type(lift) is Lift
         assert type(passenger_list) is PassengerList
-        self.df.loc[passenger_list.df.index, 'lift'] = lift.name
+        if allow_multi_assignment:
+            self.df.loc[passenger_list.df.index, 'lift'] = \
+                self.df.loc[passenger_list.df.index, 'lift'] \
+                .apply(lambda x: PassengerList.append_lift(x, lift.name))
+        else:
+            self.df.loc[passenger_list.df.index, 'lift'] = lift.name
 
     def update_passenger_floor(self, floor):
         self.df.loc[:, 'current'] = floor.name
