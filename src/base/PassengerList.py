@@ -182,25 +182,27 @@ class PassengerList:
         "filters passengers to those on a floor"
         return PassengerList(self.df.loc[self.df.dir == direction, :])
 
-    # to init test
-    def filter_by_lift_assigned(self, lift_name):
+    def filter_by_lift_assigned(self, lift):
         "filters passengers to those assigned to a lift"
         def lift_filter_condition(assignment_condition, lift_name):
             return lift_name == assignment_condition or lift_name in assignment_condition
-        filter_condition = self.df.loc[:,'lift'].apply(lambda x: lift_filter_condition(x, lift_name))
+        filter_condition = self.df.loc[:,'lift'].apply(lambda x: lift_filter_condition(x, lift.name))
         return PassengerList(self.df.loc[filter_condition, :])
 
     def filter_by_lift_unassigned(self):
         "filters passengers to those not assigned to a lift"
         return PassengerList(self.df.loc[self.df.lift == 'Unassigned', :])
     
-    # to init test
-    def filter_by_lift_assigned_not_to_other_only(self, lift_name):
-        "filters passengers to those assigned to this or not assigned to other lift"
+    def filter_by_lift_assigned_not_to_other_only(self, lift):
+        """as a signal of availability filters passengers 
+        to those assigned to this or not assigned to other lift"""
         def lift_filter_condition(assignment_condition, lift_name):
             return (
                 type(assignment_condition) is str and
-                assignment_condition == lift_name
+                (
+                    assignment_condition == lift_name or
+                    assignment_condition == 'Unassigned'
+                )
             ) or (
                 type(assignment_condition) is list and
                 (
@@ -208,15 +210,13 @@ class PassengerList:
                     len(assignment_condition) == 0
                 )
             )
-        filter_condition = self.df.loc[:,'lift'].apply(lambda x: lift_filter_condition(x, lift_name))
+        filter_condition = self.df.loc[:,'lift'].apply(lambda x: lift_filter_condition(x, lift.name))
         return PassengerList(self.df.loc[filter_condition, :])
     
     def filter_by_earliest_arrival(self, dir, n):
-        passenger_df = self.passengers.df
-        print('DEBUG onboard selection', passenger_df.loc[passenger_df.dir == dir, :] \
-            .sort_values('trip_start_time'))
-        return passenger_df.loc[passenger_df.dir == dir, :] \
-            .sort_values('trip_start_time').head(n)
+        filtered_df = self.df.loc[self.df.dir == dir, :]
+        to_select = min(n, filtered_df.shape[0])
+        return filtered_df.sort_values('trip_start_time').head(to_select)
     
     @classmethod
     def append_lift(cls, existing_assignment, lift_name):

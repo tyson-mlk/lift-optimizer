@@ -50,27 +50,29 @@ class Lift:
     def has_capacity(self):
         return self.passenger_count < self.capacity
 
-    # to init test
-    def has_floor_capacity(self, direction):
-        floor_count = self.get_current_floor().get_floor_passenger_count_with_dir(direction)
+    def has_floor_capacity(self, floor=None, direction=None):
+        if floor is None:
+            floor = self.get_current_floor()
+        if direction is None:
+            direction = self.dir
+
+        floor_count = floor.get_floor_passenger_count_with_dir(direction)
         return self.passenger_count + floor_count <= self.capacity
     
-    # to init test
     def has_capacity_for(self, passenger_selection):
         return self.passenger_count + passenger_selection.count_passengers() <= self.capacity
 
-    # to test
     async def onboard_all(self, bypass_prev_assignment=True):
         """onboard all passengers on the same floor without regarding lift capacity"""
         floor = self.get_current_floor()
         # assign lift
         if bypass_prev_assignment:
             passengers_to_assign = PASSENGERS.filter_by_floor(floor)
-            PASSENGERS.assign_lift_for_floor(passengers_to_assign, floor)
+            PASSENGERS.assign_lift_for_selection(self, passengers_to_assign, allow_multi_assignment=False)
         else:
             passengers_to_assign = PASSENGERS.filter_by_floor(floor) \
-                .filter_by_lift_assigned(self.name)
-            PASSENGERS.assign_lift_for_selection(self, passengers_to_assign)
+                .filter_by_lift_assigned_not_to_other_only(self)
+            PASSENGERS.assign_lift_for_selection(self, passengers_to_assign, allow_multi_assignment=False)
         # board
         PASSENGERS.board(passengers_to_assign.filter_by_floor(floor))
         num_to_onboard = passengers_to_assign.count_passengers()
@@ -87,7 +89,7 @@ class Lift:
 
         self.log(f"{self.name}: Onboarding {num_to_onboard} passengers at floor {floor.name}")
         self.passengers.bulk_add_passengers(passengers_to_assign)
-        self.passengers.assign_lift(self)
+        self.passengers.assign_lift(self, allow_multi_assignment=False)
         self.passengers.board(passengers_to_assign)
         floor.onboard_selected(passengers_to_assign)
         floor.log(f"{floor.name}: {num_to_onboard} passengers boarded")
@@ -95,7 +97,6 @@ class Lift:
         self.calculate_passenger_count()
         self.log(f"{self.name}: Updated passenger count {self.passenger_count}")
 
-    # to test
     async def onboard_random_available(self, bypass_prev_assignment=True):
         "onboards passengers on the same floor by random if capacity is insufficient"
         floor = FLOOR_LIST.get_floor(self.floor)
@@ -105,9 +106,9 @@ class Lift:
         else:
             eligible_passengers = PASSENGERS.filter_by_floor(floor) \
                 .filter_by_direction(self.dir) \
-                .filter_by_lift_assigned_not_to_other_only(self.name)
+                .filter_by_lift_assigned_not_to_other_only(self)
         if self.has_capacity_for(eligible_passengers):
-            selection = eligible_passengers
+            selection = eligible_passengers.df
         else:
             selection = eligible_passengers.sample_passengers(self.capacity - self.passenger_count)
         passenger_list = PassengerList(selection)
@@ -123,18 +124,17 @@ class Lift:
             await asyncio.sleep(time_to_onboard)
 
         self.log(f"{self.name}: Onboarding {num_to_onboard} passengers at floor {floor.name}")
-        PASSENGERS.assign_lift_for_selection(self, passenger_list)
+        PASSENGERS.assign_lift_for_selection(self, passenger_list, allow_multi_assignment=False)
         PASSENGERS.board(passenger_list)
         floor.onboard_selected(passenger_list)
         floor.log(f"{floor.name}: {num_to_onboard} passengers boarded")
         floor.log(f"{floor.name}: passenger count is {floor.passengers.count_passengers()}")
         self.passengers.bulk_add_passengers(passenger_list)
-        self.passengers.assign_lift(self)
+        self.passengers.assign_lift(self, allow_multi_assignment=False)
         self.passengers.board(passenger_list)
         self.calculate_passenger_count()
         self.log(f"{self.name}: Updated passenger count {self.passenger_count}")
 
-    # to test
     async def onboard_earliest_arrival(self, bypass_prev_assignment=True):
         "onboards passengers on the same floor by earliest assignment if capacity is insufficient"
         floor = FLOOR_LIST.get_floor(self.floor)
@@ -144,9 +144,9 @@ class Lift:
         else:
             eligible_passengers = PASSENGERS.filter_by_floor(floor) \
                 .filter_by_direction(self.dir) \
-                .filter_by_lift_assigned_not_to_other_only(self.name)
+                .filter_by_lift_assigned_not_to_other_only(self)
         if self.has_capacity_for(eligible_passengers):
-            selection = eligible_passengers
+            selection = eligible_passengers.df
         else:
             selection = eligible_passengers.filter_by_earliest_arrival(
                 self.dir, self.capacity - self.passenger_count
@@ -164,13 +164,13 @@ class Lift:
             await asyncio.sleep(time_to_onboard)
 
         self.log(f"{self.name}: Onboarding {num_to_onboard} passengers at floor {floor.name}")
-        PASSENGERS.assign_lift_for_selection(self, passenger_list)
+        PASSENGERS.assign_lift_for_selection(self, passenger_list, allow_multi_assignment=False)
         PASSENGERS.board(passenger_list)
         floor.onboard_selected(passenger_list)
         floor.log(f"{floor.name}: {num_to_onboard} passengers boarded")
         floor.log(f"{floor.name}: passenger count is {floor.passengers.count_passengers()}")
         self.passengers.bulk_add_passengers(passenger_list)
-        self.passengers.assign_lift(self)
+        self.passengers.assign_lift(self, allow_multi_assignment=False)
         self.passengers.board(passenger_list)
         self.calculate_passenger_count()
         self.log(f"{self.name}: Updated passenger count {self.passenger_count}")
@@ -251,6 +251,7 @@ class Lift:
                         moving_status = CalcAccelModelMovingStatus(h, d, v, self.model)
                         redirect = self.calc_is_floor_reachable_while_moving(moving_status, new_source)
                         if redirect:
+                            # TODO: assign floors for passengers, and floors of passengers
                             time_to_move = self.calc_time_to_move_while_moving(moving_status, new_source)
                             new_arrival_time = asyncio.get_running_loop().time() + time_to_move
                             timeout.reschedule(new_arrival_time)
@@ -489,17 +490,18 @@ class Lift:
             search_dir = 'D' if self.dir == 'U' else 'U'
         else:
             search_dir = self.dir
+        floor = FLOOR_LIST.get_floor(target_floor)
         if allow_multi_assignment:
             passenger_list = PASSENGERS \
                 .filter_by_floor(FLOOR_LIST.get_floor(target_floor)) \
                 .filter_by_direction(search_dir)
-            PASSENGERS.assign_lift_for_selection(self, passenger_list)
         else:
             passenger_list = PASSENGERS \
                 .filter_by_floor(FLOOR_LIST.get_floor(target_floor)) \
                 .filter_by_direction(search_dir) \
                 .filter_by_lift_unassigned()
-            PASSENGERS.assign_lift_for_selection(self, passenger_list)
+        PASSENGERS.assign_lift_for_selection(self, passenger_list)
+        floor.passengers.assign_lift_for_selection(self, passenger_list)
     
     # to test changes
     async def lift_baseline_operation(self):
@@ -509,6 +511,7 @@ class Lift:
         while True:
             if next_target is not None:
                 # baseline allows multi assignment after floor is chosen
+                # TODO: assign self to eligible passengers at next_target and the floor passenger df
                 self.assign_passengers(next_target)
                 print(f'lift moving to target {next_target}')
                 next_floor = FLOOR_LIST.get_floor(next_target)
