@@ -68,7 +68,7 @@ async def all_arrivals():
     
 async def lift_operation():
     l1 = Lift('L1', '000', 'U')
-    l2 = Lift('L1', '000', 'U')
+    l2 = Lift('L2', '000', 'U')
 
     # need to let lifts take up only unassigned passengers
     await asyncio.gather(
