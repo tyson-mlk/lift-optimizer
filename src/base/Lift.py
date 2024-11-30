@@ -62,6 +62,9 @@ class Lift:
     
     def has_capacity_for(self, passenger_selection):
         return self.passenger_count + passenger_selection.count_passengers() <= self.capacity
+    
+    def is_vacant(self):
+        return self.passenger_count == 0
 
     async def onboard_all(self, bypass_prev_assignment=True):
         """onboard all passengers on the same floor without regarding lift capacity"""
@@ -244,6 +247,7 @@ class Lift:
                     pa_queue = PASSENGERS.arrival_queue
                     pa_trigger = asyncio.wait_for(pa_queue.get(), timeout=None)
                     new_source, new_target_floor, new_dir = await pa_trigger
+                    print(f'{self.name} triggered', new_source, new_target_floor, new_dir)
                     if  (
                         self.has_capacity() and 
                         self.is_within_next_target(current_floor, floor, self.dir, 
@@ -256,18 +260,18 @@ class Lift:
                             h, d, v = self.get_moving_status_after_redirect(time_elapsed, moving_status, floor)
                         moving_status = CalcAccelModelMovingStatus(h, d, v, self.model)
                         redirect = self.calc_is_floor_reachable_while_moving(moving_status, new_source)
-                        # temp
-                        redirect = False
                         if redirect:
-                            # TODO: assign floors for passengers, and floors of passengers
                             time_to_move = self.calc_time_to_move_while_moving(moving_status, new_source)
                             new_arrival_time = asyncio.get_running_loop().time() + time_to_move
                             timeout.reschedule(new_arrival_time)
                             floor = FLOOR_LIST.get_floor(new_source)
-                            self.log(f"redirect to floor {floor.name} after {datetime.now()-time_since_latest_direction}")
-                            self.detail_log(f"schedule to arrive in {round(time_to_move, 2)}")
-                            print('redirect to floor', floor.name, 'after', datetime.now()-time_since_latest_direction)
-                            print('schedule to arrive in', round(time_to_move, 2))
+                            self.log(f"{self.name} redirect to floor {floor.name} after {datetime.now()-time_since_latest_direction}")
+                            print(self.name, 'redirect to floor', floor.name, 'after', datetime.now()-time_since_latest_direction)
+                            self.update_next_dir(floor.name)
+                            print(f'{self.name} lift next direction {self.next_dir}')
+                            self.assign_passengers(floor.name, assign_multi=True)
+                            self.detail_log(f"{self.name} schedule to arrive in {round(time_to_move, 2)}")
+                            print(self.name, 'schedule to arrive in', round(time_to_move, 2))
                             time_since_latest_direction = datetime.now()
                             after_redirect = True
         except asyncio.TimeoutError:
@@ -557,8 +561,8 @@ class Lift:
         self.update_next_dir(next_target)
         print(f'{self.name} lift next direction {self.next_dir}')
         self.assign_passengers(next_target, assign_multi=True)
-        print('debug passenger assignment')
-        PASSENGERS.pprint_passenger_status(FLOOR_LIST, ordering_type='source')
+        # print('debug passenger assignment')
+        # PASSENGERS.pprint_passenger_status(FLOOR_LIST, ordering_type='source')
         while True:
             if next_target is not None:
                 # baseline allows multi assignment after floor is chosen
@@ -567,16 +571,18 @@ class Lift:
                 await self.move(next_floor, self.next_dir)
                 print(f'{self.name} lift moved to target {self.floor} facing {self.dir}')
                 self.debug_print_state()
-                await self.loading(self.next_dir, print_lift_stats=False, print_passenger_stats=True)
+                await self.loading(self.next_dir)
                 print(f'{self.name} after loading, lift passengers:', self.passengers.df.index.values)
                 await asyncio.sleep(0)
+                # debug only
+                self.debug_print_overall_stats()
                 next_target = self.next_baseline_target()
                 print(f'{self.name} lift new target {next_target}')
                 self.update_next_dir(next_target)
                 print(f'{self.name} lift next direction {self.next_dir}')
                 self.assign_passengers(next_target, assign_multi=True)
-                print('debug passenger assignment')
-                PASSENGERS.pprint_passenger_status(FLOOR_LIST, ordering_type='source')
+                # print('debug passenger assignment')
+                # PASSENGERS.pprint_passenger_status(FLOOR_LIST, ordering_type='source')
             else:
                 await asyncio.sleep(0)
                 next_target = self.next_baseline_target()
@@ -585,8 +591,8 @@ class Lift:
                     self.update_next_dir(next_target)        
                     print(f'{self.name} lift next direction {self.next_dir}')
                     self.assign_passengers(next_target, assign_multi=True)
-                    print('debug passenger assignment')
-                    PASSENGERS.pprint_passenger_status(FLOOR_LIST, ordering_type='source')
+                    # print('debug passenger assignment')
+                    # PASSENGERS.pprint_passenger_status(FLOOR_LIST, ordering_type='source')
     
     async def loading(self, next_dir, print_lift_stats = False, print_passenger_stats=False):
         await self.offboard_arrived()
@@ -617,5 +623,7 @@ class Lift:
             print('lift empty')
 
     def debug_print_state(self):
-        print(f"{self.name} at floor {self.floor} with passengers {self.passengers.df.index.values}")
+        print(f"{self.name} at floor {self.floor} with passengers: {self.passengers.df.index.values}")
 
+    def debug_print_overall_stats(self):
+        print('overall stats', PASSENGERS.df.groupby(['status', 'lift']).size().sort_index(level='status'))
