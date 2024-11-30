@@ -244,8 +244,9 @@ class Lift:
         try:
             async with asyncio.timeout(time_to_move) as timeout:
                 while True:
+                    redirect = False
                     pa_queue = PASSENGERS.arrival_queue
-                    pa_trigger = asyncio.wait_for(pa_queue.get(), timeout=None)
+                    pa_trigger = asyncio.wait_for(pa_queue.get(), other_lift_queue.get(), timeout=None)
                     new_source, new_target_floor, new_dir = await pa_trigger
                     print(f'{self.name} triggered', new_source, new_target_floor, new_dir)
                     if  (
@@ -274,6 +275,14 @@ class Lift:
                             print(self.name, 'schedule to arrive in', round(time_to_move, 2))
                             time_since_latest_direction = datetime.now()
                             after_redirect = True
+                    if not redirect:
+                        msg = new_source, new_target_floor, new_dir
+                        # TODO: add other lift queue to wait
+                        other_lift_queue.put_nowait(msg)
+                        # next next step to replace
+                        next_lift = find_next_lift_to_search_redirect()
+                        trigger_next_lift_queue(msg)
+                        asyncio.sleep(0)
         except asyncio.TimeoutError:
             self.log(f"{self.name}: reached {floor.name} at height {floor.height}")
             if next_dir is None:
