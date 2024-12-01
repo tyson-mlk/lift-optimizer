@@ -28,16 +28,22 @@ for source in FLOOR_LIST.list_floors():
             dir = 'D'
         key = (source, target, dir)
         if (source == '000') | (target == '000'):
-            trip_arrival_rates[key] = 0.003
+            trip_arrival_rates[key] = 0.0005
+            # trip_arrival_rates[key] = 0.00005 # sparse request
+            # trip_arrival_rates[key] = 0.003 # one lift busy
+            # trip_arrival_rates[key] = 0.006 # two lifts busy
         else:
-            trip_arrival_rates[key] = 0.0002
+            trip_arrival_rates[key] = 0.0012 # encourage redirect
+            # trip_arrival_rates[key] = 0.00005 # sparse request
+            # trip_arrival_rates[key] = 0.0002 # one lift busy
+            # trip_arrival_rates[key] = 0.0004 # two lifts busy
 
 def increment_counter(counter_type):
     COUNTERS[counter_type] += 1
 
-def passenger_arrival(source_floor, target_floor, start_time):
+async def passenger_arrival(source_floor, target_floor, start_time):
     new_passenger = Passenger(source_floor, target_floor, start_time)
-    PASSENGERS.passenger_arrival(new_passenger)
+    await PASSENGERS.passenger_arrival(new_passenger)
 
 # simulates exponential arrival time of passengers
 async def exp_gen(rate=1.0):
@@ -68,7 +74,9 @@ async def all_arrivals():
     
 async def lift_operation():
     l1 = Lift('L1', '000', 'U')
+    PASSENGERS.register_lift(l1)
     l2 = Lift('L2', '000', 'U')
+    PASSENGERS.register_lift(l2)
 
     # need to let lifts take up only unassigned passengers
     await asyncio.gather(
@@ -77,7 +85,7 @@ async def lift_operation():
     )
 
 async def main():
-    timeout = 500
+    timeout = 800
     start_time = datetime.now()
     start_time.hour
     try:
@@ -86,4 +94,4 @@ async def main():
     except asyncio.TimeoutError:
         print('timeout: save passengers to file')
         PASSENGERS.df.sort_values(['status', 'dir', 'source', 'trip_start_time']) \
-            .to_csv(f'./PASimOneLift_{start_time.hour:02}_{start_time.minute:02}_{start_time.second:02}.csv')
+            .to_csv(f'./PAMultLift_{start_time.hour:02}_{start_time.minute:02}_{start_time.second:02}.csv')

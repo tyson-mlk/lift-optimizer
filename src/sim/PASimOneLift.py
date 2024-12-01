@@ -35,9 +35,9 @@ for source in FLOOR_LIST.list_floors():
 def increment_counter(counter_type):
     COUNTERS[counter_type] += 1
 
-def passenger_arrival(source_floor, target_floor, start_time):
+async def passenger_arrival(source_floor, target_floor, start_time):
     new_passenger = Passenger(source_floor, target_floor, start_time)
-    PASSENGERS.passenger_arrival(new_passenger)
+    await PASSENGERS.passenger_arrival(new_passenger)
 
 # simulates exponential arrival time of passengers
 async def exp_gen(rate=1.0):
@@ -51,7 +51,7 @@ async def cont_exp_gen(trip, rate=1.0):
         target_floor = trip[1]
         while True:
             await exp_gen(rate=rate)
-            passenger_arrival(source_floor, target_floor, datetime.now())
+            await passenger_arrival(source_floor, target_floor, datetime.now())
             # for debugging
             # print('passenger arrived from', trip[0], 'moving', trip[2], 'to', trip[1])
             await asyncio.sleep(0)
@@ -68,6 +68,7 @@ async def all_arrivals():
     
 async def lift_operation():
     l1 = Lift('l1', '000', 'U')
+    PASSENGERS.register_lift(l1)
 
     task = asyncio.create_task(l1.lift_baseline_operation())
     await task

@@ -23,7 +23,8 @@ class PassengerList:
         'time_on_lift': 'Float64'
     }
 
-    def __init__(self, passenger_list_df = None, p_list_name = None, lift_tracking = False):
+    def __init__(self, passenger_list_df = None, p_list_name = None,
+                 lift_managing = False, lift_tracking = False):
         self.name = p_list_name
         if p_list_name is not None:
             logger = get_logger(p_list_name, self.__class__.__name__, INFO)
@@ -47,6 +48,9 @@ class PassengerList:
             )
         if lift_tracking:
             self.arrival_queue = Queue()
+        if lift_managing:
+            self.lift_msg_queue = Queue()
+            self.tracking_lifts = []
 
     def __del__(self):
         self.log(f"{self.name}: destruct")
@@ -91,9 +95,36 @@ class PassengerList:
             PassengerList.schema
         )
     
-    def register_arrivals(self, passenger):
+    # to init test
+    async def register_arrivals(self, passenger):
         msg = passenger.source, passenger.target, passenger.dir
-        self.arrival_queue.put_nowait(msg)
+        search_redirect_lift = self.lift_search_redirect_gen(passenger.source, passenger.dir)
+        next_lift = next(search_redirect_lift)
+        while next_lift is not None:
+            next_lift.passengers.arrival_queue.put_nowait(msg)
+            redirected = await self.lift_msg_queue.get()
+            if redirected:
+                break
+            next_lift = next(search_redirect_lift)
+
+    # to init test
+    def register_lift(self, lift):
+        assert hasattr(self, 'tracking_lifts')
+        self.tracking_lifts += [lift]
+
+    # to init test
+    def lift_search_redirect_gen(self, arrival_source, arrival_dir):
+        time = datetime.now()
+        lift_order = {}
+
+        from base.FloorList import FLOOR_LIST
+        target_height = FLOOR_LIST.get_floor(arrival_source).height
+        for lift in PASSENGERS.tracking_lifts:
+            lift_order[lift] = FLOOR_LIST.height_queue_order(
+                target_height, arrival_dir, lift.get_stopping_height(time), lift.dir
+            )
+        for sorted_lift in sorted(lift_order.items(), key=lambda x: x[1]):
+            yield sorted_lift[0]
     
     def count_passengers(self) -> int:
         return self.df.shape[0]
@@ -131,7 +162,7 @@ class PassengerList:
     def add_passenger_list(self, passenger_df: pd.DataFrame):
         self.df = pd.concat([self.df, passenger_df])
 
-    def passenger_arrival(self, passenger: Passenger):
+    async def passenger_arrival(self, passenger: Passenger):
         passenger_df = PassengerList.passenger_to_df(passenger)
         self.add_passenger_list(passenger_df)
         self.log(f"{self.name}: 1 new arrival; count is {self.count_traveling_passengers()}")
@@ -141,7 +172,7 @@ class PassengerList:
         floor.passengers.add_passenger_list(passenger_df)
         floor.log(f"{floor.name}: 1 new arrival; count is {floor.passengers.count_passengers()}")
 
-        self.register_arrivals(passenger)
+        await self.register_arrivals(passenger)
 
     def passenger_list_arrival(self, passengers):
         passenger_df = passengers.df
@@ -348,4 +379,6 @@ class PassengerList:
             print(df.loc[:, print_cols])
 
 
-PASSENGERS = PassengerList(p_list_name='all passengers', lift_tracking=True)
+PASSENGERS = PassengerList(
+    p_list_name='all passengers', lift_managing=True, lift_tracking=True
+)

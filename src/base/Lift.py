@@ -16,7 +16,8 @@ LIFT_CAPACITY_DEFAULT = 12
 class Lift:
     "lift class"
 
-    def __init__(self, name, floorname, dir, capacity = LIFT_CAPACITY_DEFAULT, model = "accel") -> None:
+    def __init__(self, name, floorname, dir, capacity = LIFT_CAPACITY_DEFAULT, model = "accel", 
+                 lift_managing=False, lift_tracking=True) -> None:
         self.name = name
         self.floor = floorname
         self.height = self.get_current_floor().height
@@ -24,9 +25,11 @@ class Lift:
         self.next_dir = None # store for dir of next target
         self.capacity = capacity
         self.passenger_count = 0
-        self.passengers: PassengerList = PassengerList()
+        self.passengers: PassengerList = PassengerList(lift_managing=lift_managing, lift_tracking=lift_tracking)
         self.calculate_passenger_count()
         self.model = LiftSpec(model=model)
+        self.redirect_status = False
+        self.self.start_move_info = None
         logger = get_logger(name, self.__class__.__name__, INFO)
         detail_logger = get_logger(name+'_det', self.__class__.__name__, DEBUG)
         self.log = lambda msg: logger.info(msg)
@@ -240,13 +243,14 @@ class Lift:
         self.log(f"{self.name}: Start move from {current_floor.name} height {current_floor.height} at dir {self.dir}")
 
         time_since_latest_direction = datetime.now()
+        self.start_move_info = self.floor, floor.name, time_since_latest_direction
         after_redirect = False
         try:
             async with asyncio.timeout(time_to_move) as timeout:
                 while True:
                     redirect = False
-                    pa_queue = PASSENGERS.arrival_queue
-                    pa_trigger = asyncio.wait_for(pa_queue.get(), other_lift_queue.get(), timeout=None)
+                    arrival_queue = self.passengers.arrival_queue
+                    pa_trigger = asyncio.wait_for(arrival_queue.get(), timeout=None)
                     new_source, new_target_floor, new_dir = await pa_trigger
                     print(f'{self.name} triggered', new_source, new_target_floor, new_dir)
                     if  (
@@ -274,15 +278,9 @@ class Lift:
                             self.detail_log(f"{self.name} schedule to arrive in {round(time_to_move, 2)}")
                             print(self.name, 'schedule to arrive in', round(time_to_move, 2))
                             time_since_latest_direction = datetime.now()
+                            self.redirect_status = moving_status, floor.name, time_since_latest_direction
                             after_redirect = True
-                    if not redirect:
-                        msg = new_source, new_target_floor, new_dir
-                        # TODO: add other lift queue to wait
-                        other_lift_queue.put_nowait(msg)
-                        # next next step to replace
-                        next_lift = find_next_lift_to_search_redirect()
-                        trigger_next_lift_queue(msg)
-                        asyncio.sleep(0)
+                    PASSENGERS.lift_msg_queue.put_nowait(redirect)
         except asyncio.TimeoutError:
             self.log(f"{self.name}: reached {floor.name} at height {floor.height}")
             if next_dir is None:
@@ -305,6 +303,7 @@ class Lift:
             self.height = floor.height
             self.passengers.update_passenger_floor(floor)
             PASSENGERS.update_lift_passenger_floor(self, floor)
+            self.redirect_status = False
 
         
     def manual_move(self, floor):
@@ -359,6 +358,20 @@ class Lift:
     
     def get_moving_status_after_redirect(self, time_elapsed, moving_status, target_floor):
         return moving_status.calc_status(target_floor.height, time_elapsed)
+    
+    # to init test
+    def get_stopping_height(self, time):
+        if self.redirect_status is False:
+            time_elapsed = (time-self.start_move_info[0]).total_seconds()
+            start_floor = FLOOR_LIST.get_floor(self.start_move_info[1])
+            existing_target_floor = FLOOR_LIST.get_floor(self.start_move_info[2])
+            moving_status = self.get_moving_status_from_floor(time_elapsed, start_floor, existing_target_floor)
+        else:
+            moving_status = self.redirect_status[0]
+            existing_target_floor = FLOOR_LIST.get_floor(self.redirect_status[1])
+            time_elapsed = (time-self.redirect_status[2]).total_seconds()
+            moving_status = self.get_moving_status_after_redirect(time_elapsed, moving_status, existing_target_floor)
+        return moving_status.get_status_to_stop()[0]
 
     def calc_time_to_move_from_floor(self, time_elapsed, source_floor, target_floor, proposed_floor):
         assert self.model.model_type == "accel"
