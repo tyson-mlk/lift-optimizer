@@ -304,6 +304,25 @@ class PassengerList:
         else:
             self.df.loc[passenger_list.df.index, 'lift'] = lift.name
 
+    def unassign_lift_from_selection(self, lift, passenger_list):
+        from base.Lift import Lift
+
+        assert type(lift) is Lift
+        assert type(passenger_list) is PassengerList
+        def unassign(lift_name, existing_assignment):
+            if type(existing_assignment) is str:
+                if existing_assignment == lift_name:
+                    return "Unassigned"
+            elif type(existing_assignment) is list:
+                if lift_name in existing_assignment:
+                    return existing_assignment.remove(lift_name)
+            return existing_assignment
+                
+        self.df.loc[passenger_list.df.index, 'lift'] = \
+            self.df.loc[passenger_list.df.index, 'lift'].apply(
+                lambda x: unassign(self.name, x)
+            )
+
     def update_passenger_floor(self, floor):
         self.df.loc[:, 'current'] = floor.name
 

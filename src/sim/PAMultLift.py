@@ -28,15 +28,15 @@ for source in FLOOR_LIST.list_floors():
             dir = 'D'
         key = (source, target, dir)
         if (source == '000') | (target == '000'):
-            trip_arrival_rates[key] = 0.0005
             # trip_arrival_rates[key] = 0.00005 # sparse request
             # trip_arrival_rates[key] = 0.003 # one lift busy
-            # trip_arrival_rates[key] = 0.006 # two lifts busy
+            trip_arrival_rates[key] = 0.006 # two lifts busy
+            # trip_arrival_rates[key] = 0.012 # many lifts
         else:
-            trip_arrival_rates[key] = 0.0012 # encourage redirect
             # trip_arrival_rates[key] = 0.00005 # sparse request
             # trip_arrival_rates[key] = 0.0002 # one lift busy
-            # trip_arrival_rates[key] = 0.0004 # two lifts busy
+            trip_arrival_rates[key] = 0.0004 # two lifts busy
+            # trip_arrival_rates[key] = 0.001 # two lifts busy
 
 def increment_counter(counter_type):
     COUNTERS[counter_type] += 1
@@ -77,11 +77,20 @@ async def lift_operation():
     PASSENGERS.register_lift(l1)
     l2 = Lift('L2', '000', 'U')
     PASSENGERS.register_lift(l2)
+    # l3 = Lift('L3', '000', 'U')
+    # PASSENGERS.register_lift(l3)
+    # l4 = Lift('L4', '000', 'U')
+    # PASSENGERS.register_lift(l4)
+    # l5 = Lift('L5', '000', 'U')
+    # PASSENGERS.register_lift(l5)
 
     # need to let lifts take up only unassigned passengers
     await asyncio.gather(
         l1.lift_baseline_operation(),
-        l2.lift_baseline_operation()
+        l2.lift_baseline_operation(),
+        # l3.lift_baseline_operation(),
+        # l4.lift_baseline_operation(),
+        # l5.lift_baseline_operation()
     )
 
 async def main():
