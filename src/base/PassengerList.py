@@ -99,13 +99,11 @@ class PassengerList:
     async def register_arrivals(self, passenger):
         msg = passenger.source, passenger.target, passenger.dir
         search_redirect_lift = self.lift_search_redirect_gen(passenger.source, passenger.dir)
-        next_lift = next(search_redirect_lift)
-        while next_lift is not None:
+        for next_lift in iter(search_redirect_lift):
             next_lift.passengers.arrival_queue.put_nowait(msg)
             redirected = await self.lift_msg_queue.get()
             if redirected:
                 break
-            next_lift = next(search_redirect_lift)
 
     # to init test
     def register_lift(self, lift):

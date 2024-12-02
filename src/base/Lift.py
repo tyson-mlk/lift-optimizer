@@ -29,7 +29,7 @@ class Lift:
         self.calculate_passenger_count()
         self.model = LiftSpec(model=model)
         self.redirect_status = False
-        self.self.start_move_info = None
+        self.start_move_info = self.floor, self.floor, datetime.now()
         logger = get_logger(name, self.__class__.__name__, INFO)
         detail_logger = get_logger(name+'_det', self.__class__.__name__, DEBUG)
         self.log = lambda msg: logger.info(msg)
@@ -362,15 +362,16 @@ class Lift:
     # to init test
     def get_stopping_height(self, time):
         if self.redirect_status is False:
-            time_elapsed = (time-self.start_move_info[0]).total_seconds()
-            start_floor = FLOOR_LIST.get_floor(self.start_move_info[1])
-            existing_target_floor = FLOOR_LIST.get_floor(self.start_move_info[2])
-            moving_status = self.get_moving_status_from_floor(time_elapsed, start_floor, existing_target_floor)
+            time_elapsed = (time-self.start_move_info[2]).total_seconds()
+            start_floor = FLOOR_LIST.get_floor(self.start_move_info[0])
+            existing_target_floor = FLOOR_LIST.get_floor(self.start_move_info[1])
+            h, d, v = self.get_moving_status_from_floor(time_elapsed, start_floor, existing_target_floor)
         else:
             moving_status = self.redirect_status[0]
             existing_target_floor = FLOOR_LIST.get_floor(self.redirect_status[1])
             time_elapsed = (time-self.redirect_status[2]).total_seconds()
-            moving_status = self.get_moving_status_after_redirect(time_elapsed, moving_status, existing_target_floor)
+            h, d, v = self.get_moving_status_after_redirect(time_elapsed, moving_status, existing_target_floor)
+        moving_status = CalcAccelModelMovingStatus(h, d, v, self.model)
         return moving_status.get_status_to_stop()[0]
 
     def calc_time_to_move_from_floor(self, time_elapsed, source_floor, target_floor, proposed_floor):

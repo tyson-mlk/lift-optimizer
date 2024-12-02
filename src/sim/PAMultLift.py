@@ -57,7 +57,7 @@ async def cont_exp_gen(trip, rate=1.0):
         target_floor = trip[1]
         while True:
             await exp_gen(rate=rate)
-            passenger_arrival(source_floor, target_floor, datetime.now())
+            await passenger_arrival(source_floor, target_floor, datetime.now())
             # for debugging
             # print('passenger arrived from', trip[0], 'moving', trip[2], 'to', trip[1])
             await asyncio.sleep(0)
