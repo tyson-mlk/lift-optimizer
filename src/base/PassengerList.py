@@ -260,7 +260,7 @@ class PassengerList:
             if lift_name in existing_assignment:
                 return existing_assignment
             return existing_assignment + [lift_name]
-        else:
+        elif type(existing_assignment) is str:
             if existing_assignment == 'Unassigned':
                 return lift_name
             elif lift_name != existing_assignment:
@@ -315,7 +315,7 @@ class PassengerList:
                     return "Unassigned"
             elif type(existing_assignment) is list:
                 if lift_name in existing_assignment:
-                    return existing_assignment.remove(lift_name)
+                    return [l for l in existing_assignment if l != lift_name]
             return existing_assignment
                 
         self.df.loc[passenger_list.df.index, 'lift'] = \

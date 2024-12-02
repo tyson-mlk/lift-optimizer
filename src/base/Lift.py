@@ -165,18 +165,14 @@ class Lift:
                 self.dir, self.capacity - self.passenger_count
             )
         passenger_list = PassengerList(selection)
-
+        
         from metrics.BoardingTime import boarding_time
 
         num_to_onboard = passenger_list.count_passengers()
         if num_to_onboard == 0:
             return None
         time_to_onboard = boarding_time(self, self.passenger_count, 0, num_to_onboard)
-        if time_to_onboard > 0:
-            self.detail_log(f'onboarding {num_to_onboard} passengers takes {time_to_onboard} s')
-            await asyncio.sleep(time_to_onboard)
 
-        self.log(f"{self.name}: Onboarding {num_to_onboard} passengers at floor {floor.name}")
         PASSENGERS.assign_lift_for_selection(self, passenger_list, assign_multi=False)
         PASSENGERS.board(passenger_list)
         floor.onboard_selected(passenger_list)
@@ -186,14 +182,11 @@ class Lift:
         self.passengers.assign_lift(self, assign_multi=False)
         self.passengers.board(passenger_list)
         self.calculate_passenger_count()
-        # for entry in self.passengers.df.lift:
-        #     if type(entry) is list and len(entry) > 1:
-        #         print(passenger_list.df)
-        #         print(self.passengers.df)
-        #         print(floor.passengers.df)
-        #         print(PASSENGERS.loc[passenger_list.df.index,:])
-        #         raise SystemError
-        # self.log(f"{self.name}: Updated passenger count {self.passenger_count}")
+
+        if time_to_onboard > 0:
+            self.detail_log(f'onboarding {num_to_onboard} passengers takes {time_to_onboard} s')
+            await asyncio.sleep(time_to_onboard)
+        self.log(f"{self.name}: Onboarding {num_to_onboard} passengers at floor {floor.name}")
 
     async def offboard_all(self):
         floor = FLOOR_LIST.get_floor(self.floor)
@@ -283,8 +276,8 @@ class Lift:
                             floor = FLOOR_LIST.get_floor(new_source)
                             self.log(f"{self.name} redirect to floor {floor.name} after {datetime.now()-time_since_latest_direction}")
                             self.update_next_dir(floor.name)
-                            self.log(f"{self.name} lift next direction {self.next_dir}")
-                            print(f'{self.name} lift next direction {self.next_dir}')
+                            self.log(f"{self.name} lift redirect to {self.next_dir}")
+                            print(f'{self.name} lift redirect to {self.next_dir}')
                             self.unassign_passengers(prev_floor.name, prev_next_dir)
                             self.assign_passengers(floor.name, assign_multi=True)
                             self.detail_log(f"{self.name} schedule to arrive in {round(time_to_move, 2)}")
@@ -625,7 +618,8 @@ class Lift:
                 # self.debug_print_state()
                 await self.loading(self.next_dir)
                 for lift in PASSENGERS.tracking_lifts:                
-                    print(f'{lift.name} after loading at {lift.floor}, lift passengers:', lift.passengers.df.index.values)
+                    print(f'{lift.name} after loading at {lift.floor}, lift passengers:',
+                          ', '.join([str(i) for i in lift.passengers.df.index.values]))
                 self.print_overall_stats()
                 await asyncio.sleep(0)
                 next_target = self.next_baseline_target()
@@ -680,16 +674,3 @@ class Lift:
 
     def print_overall_stats(self):
         print('overall stats', PASSENGERS.df.groupby(['status', 'lift']).size().sort_index(level='status'))
-        print(PASSENGERS.df.loc[PASSENGERS.df.status != 'Arrived', ['source', 'target', 'status', 'lift']])
-        debug = True
-        if debug:
-            cond_1 = PASSENGERS.df.status != 'Waiting'
-            cond_2 = PASSENGERS.df.lift.apply(lambda x: type(x) is list)
-            if PASSENGERS.df.loc[cond_1 & cond_2,:].shape[0] > 0:
-                print(PASSENGERS.df.loc[cond_1 & cond_2, ['source', 'target', 'status', 'lift']])
-                for lift in PASSENGERS.tracking_lifts:
-                    print(f'{lift.name} after loading, lift at floor {lift.floor} passengers:', lift.passengers.df.index.values)
-                for floor in FLOOR_LIST.list_floors():
-                    floor = FLOOR_LIST.get_floor(floor)
-                    print(f'{floor.name} floor passengers:', floor.passengers.df.index.values)
-                raise ValueError()
