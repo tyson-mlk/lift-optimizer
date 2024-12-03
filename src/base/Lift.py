@@ -92,11 +92,7 @@ class Lift:
 
         # wait boarding time
         time_to_onboard = boarding_time(self, self.passenger_count, 0, num_to_onboard)
-        if time_to_onboard > 0:
-            self.detail_log(f'onboarding {num_to_onboard} passengers takes {time_to_onboard} s')
-            await asyncio.sleep(time_to_onboard)
 
-        self.log(f"{self.name}: Onboarding {num_to_onboard} passengers at floor {floor.name}")
         self.passengers.bulk_add_passengers(passengers_to_assign)
         self.passengers.assign_lift(self, assign_multi=False)
         self.passengers.board(passengers_to_assign)
@@ -105,6 +101,11 @@ class Lift:
         floor.log(f"{floor.name}: passenger count is {floor.passengers.count_passengers()}")
         self.calculate_passenger_count()
         self.log(f"{self.name}: Updated passenger count {self.passenger_count}")
+
+        if time_to_onboard > 0:
+            self.detail_log(f'onboarding {num_to_onboard} passengers takes {time_to_onboard} s')
+            await asyncio.sleep(time_to_onboard)
+        self.log(f"{self.name}: Onboarding {num_to_onboard} passengers at floor {floor.name}")
 
     async def onboard_random_available(self, bypass_prev_assignment=True):
         "onboards passengers on the same floor by random if capacity is insufficient"
@@ -130,11 +131,7 @@ class Lift:
         if num_to_onboard == 0:
             return None
         time_to_onboard = boarding_time(self, self.passenger_count, 0, num_to_onboard)
-        if time_to_onboard > 0:
-            self.detail_log(f'onboarding {num_to_onboard} passengers takes {time_to_onboard} s')
-            await asyncio.sleep(time_to_onboard)
 
-        self.log(f"{self.name}: Onboarding {num_to_onboard} passengers at floor {floor.name}")
         PASSENGERS.assign_lift_for_selection(self, passenger_list, assign_multi=False)
         PASSENGERS.board(passenger_list)
         floor.onboard_selected(passenger_list)
@@ -145,6 +142,11 @@ class Lift:
         self.passengers.board(passenger_list)
         self.calculate_passenger_count()
         self.log(f"{self.name}: Updated passenger count {self.passenger_count}")
+
+        if time_to_onboard > 0:
+            self.detail_log(f'onboarding {num_to_onboard} passengers takes {time_to_onboard} s')
+            await asyncio.sleep(time_to_onboard)
+        self.log(f"{self.name}: Onboarding {num_to_onboard} passengers at floor {floor.name}")
 
     async def onboard_earliest_arrival(self, next_dir, bypass_prev_assignment=True):
         "onboards passengers on the same floor by earliest assignment if capacity is insufficient"
