@@ -148,17 +148,17 @@ class Lift:
             await asyncio.sleep(time_to_onboard)
         self.log(f"{self.name}: Onboarding {num_to_onboard} passengers at floor {floor.name}")
 
-    async def onboard_earliest_arrival(self, next_dir, bypass_prev_assignment=True):
+    async def onboard_earliest_arrival(self, bypass_prev_assignment=True):
         "onboards passengers on the same floor by earliest assignment if capacity is insufficient"
         floor = FLOOR_LIST.get_floor(self.floor)
         if bypass_prev_assignment:
             eligible_passengers = PASSENGERS.filter_by_status_waiting() \
                 .filter_by_floor(floor) \
-                .filter_by_direction(next_dir)
+                .filter_by_direction(self.next_dir)
         else:
             eligible_passengers = PASSENGERS.filter_by_status_waiting() \
                 .filter_by_floor(floor) \
-                .filter_by_direction(next_dir) \
+                .filter_by_direction(self.next_dir) \
                 .filter_by_lift_assigned_not_to_other_only(self)
         if self.has_capacity_for(eligible_passengers):
             selection = eligible_passengers.df
@@ -597,9 +597,6 @@ class Lift:
     async def lift_baseline_operation(self):
         """
         baseline operation
-        variables:
-        - next_target: target floor to move to; None if no request outstanding
-        - next_dir: direction to take passengers afer moving to target; None if
         """
         print(f'{self.name} start baseline operation')
         await asyncio.sleep(0)
@@ -618,7 +615,7 @@ class Lift:
                 await self.move(next_floor)
                 print(f'{self.name} lift moved to target {self.floor} facing {self.dir}')
                 # self.debug_print_state()
-                await self.loading(self.next_dir)
+                await self.loading()
                 for lift in PASSENGERS.tracking_lifts:                
                     print(f'{lift.name} after loading at {lift.floor}, lift passengers:',
                           ', '.join([str(i) for i in lift.passengers.df.index.values]))
@@ -642,9 +639,9 @@ class Lift:
                     # print('debug passenger assignment')
                     # PASSENGERS.pprint_passenger_status(FLOOR_LIST, ordering_type='source')
     
-    async def loading(self, next_dir, print_lift_stats = False, print_passenger_stats=False):
+    async def loading(self, print_lift_stats = False, print_passenger_stats=False):
         await self.offboard_arrived()
-        await self.onboard_earliest_arrival(next_dir)
+        await self.onboard_earliest_arrival()
         PASSENGERS.update_passenger_metrics(print_passenger_stats, FLOOR_LIST)
         if print_lift_stats:
             self.pprint_current_passengers()

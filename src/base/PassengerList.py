@@ -95,7 +95,6 @@ class PassengerList:
             PassengerList.schema
         )
     
-    # to init test
     async def register_arrivals(self, passenger):
         msg = passenger.source, passenger.target, passenger.dir
         search_redirect_lift = self.lift_search_redirect_gen(passenger.source, passenger.dir)
@@ -105,12 +104,10 @@ class PassengerList:
             if redirected:
                 break
 
-    # to init test
     def register_lift(self, lift):
         assert hasattr(self, 'tracking_lifts')
         self.tracking_lifts += [lift]
 
-    # to init test
     def lift_search_redirect_gen(self, arrival_source, arrival_dir):
         time = datetime.now()
         lift_order = {}
