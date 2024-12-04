@@ -17,6 +17,9 @@ class CalcMovingFloor:
         elif lift_spec.model_type == 'unif':
             self.calc_state = lambda t: self.uniform_model_status_at(t)
 
+    def __str__(self):
+        return f"{self.spec.__str__()}, source: {self.source_height}, target: {self.target_height}"
+
     def accel_model_reaches_max(self):
         return self.dist >= self.spec.get_accel_dist()
     

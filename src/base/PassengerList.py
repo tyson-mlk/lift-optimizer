@@ -95,6 +95,7 @@ class PassengerList:
             PassengerList.schema
         )
     
+    # to init test
     async def register_arrivals(self, passenger):
         msg = passenger.source, passenger.target, passenger.dir
         search_redirect_lift = self.lift_search_redirect_gen(passenger.source, passenger.dir)
@@ -108,6 +109,7 @@ class PassengerList:
         assert hasattr(self, 'tracking_lifts')
         self.tracking_lifts += [lift]
 
+    # to init test
     def lift_search_redirect_gen(self, arrival_source, arrival_dir):
         time = datetime.now()
         lift_order = {}
@@ -115,9 +117,13 @@ class PassengerList:
         from base.FloorList import FLOOR_LIST
         target_height = FLOOR_LIST.get_floor(arrival_source).height
         for lift in PASSENGERS.tracking_lifts:
-            lift_order[lift] = FLOOR_LIST.height_queue_order(
-                target_height, arrival_dir, lift.get_stopping_height(time), lift.dir
-            )
+            # lift_order[lift] = FLOOR_LIST.height_queue_order(
+            #     target_height, arrival_dir, lift.get_stopping_height(time), lift.dir
+            # )
+            # TODO: queue by time
+            time_to_reach = lift.get_reaching_time(time, target_height)
+            if lift.dir == arrival_dir and time_to_reach is not None:
+                lift_order[lift] = time_to_reach
         for sorted_lift in sorted(lift_order.items(), key=lambda x: x[1]):
             yield sorted_lift[0]
     
@@ -317,7 +323,7 @@ class PassengerList:
                 
         self.df.loc[passenger_list.df.index, 'lift'] = \
             self.df.loc[passenger_list.df.index, 'lift'].apply(
-                lambda x: unassign(self.name, x)
+                lambda x: unassign(lift.name, x)
             )
 
     def update_passenger_floor(self, floor):
