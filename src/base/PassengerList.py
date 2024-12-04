@@ -120,7 +120,6 @@ class PassengerList:
             # lift_order[lift] = FLOOR_LIST.height_queue_order(
             #     target_height, arrival_dir, lift.get_stopping_height(time), lift.dir
             # )
-            # TODO: queue by time
             time_to_reach = lift.get_reaching_time(time, target_height)
             if lift.dir == arrival_dir and time_to_reach is not None:
                 lift_order[lift] = time_to_reach

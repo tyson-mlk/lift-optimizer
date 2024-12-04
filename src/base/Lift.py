@@ -35,6 +35,7 @@ class Lift:
             'target_floor': self.floor,
             'start_move_time': datetime.now()
         }
+        self.loading_state = False
         # logging
         logger = get_logger(name, self.__class__.__name__, INFO)
         detail_logger = get_logger(name+'_det', self.__class__.__name__, DEBUG)
@@ -74,6 +75,71 @@ class Lift:
     
     def is_vacant(self):
         return self.passenger_count == 0
+    
+    # to init test
+    async def assign_passengers_while_boarding(self, time_to_board):
+        try:
+            first_assignment = True
+            time_left_for_boarding = time_to_board
+            arrival_queue = self.passengers.arrival_queue
+            while True:
+                boarding_time_from = datetime.now()
+                pa_trigger = asyncio.wait_for(arrival_queue.get(), timeout=time_left_for_boarding)
+                new_source, _, new_dir = await pa_trigger
+                if not first_assignment:
+                    self.unassign_passengers(prev_new_source, prev_new_dir)
+                floor = FLOOR_LIST.get_floor(new_source)
+                self.update_next_dir(floor.name)
+                new_passenger_arrival_at = datetime.now()
+                time_taken_to_arrive = (new_passenger_arrival_at - boarding_time_from).total_seconds()
+                print(f"{self.name} assigned to floor {floor.name} dir  {self.next_dir} "
+                      f"after {time_taken_to_arrive}")
+                self.assign_passengers(floor.name, assign_multi=True)
+                time_left_for_boarding -= time_taken_to_arrive
+                
+                first_assignment = False
+                prev_new_source, prev_new_dir = new_source, new_dir
+                PASSENGERS.lift_msg_queue.put_nowait(True)
+        except asyncio.TimeoutError:
+            pass
+    
+    # to init test
+    def precalc_num_to_onboard(self, onboarding_mode, bypass_prev_assignment=True):
+        """
+        preliminary calculation for number of passengers to onboard
+        this may not be accurate as passenger state may have changed when onboarding
+        """
+        floor = self.get_current_floor()
+        if onboarding_mode == 'all':
+            if bypass_prev_assignment:
+                passengers_to_assign = PASSENGERS.filter_by_status_waiting() \
+                    .filter_by_floor(floor)
+            else:
+                passengers_to_assign = PASSENGERS.filter_by_status_waiting() \
+                    .filter_by_floor(floor) \
+                    .filter_by_lift_assigned_not_to_other_only(self)
+            return passengers_to_assign.count_passengers()
+        else:
+            if bypass_prev_assignment:
+                eligible_passengers = PASSENGERS.filter_by_status_waiting() \
+                    .filter_by_floor(floor) \
+                    .filter_by_direction(self.next_dir)
+            else:
+                eligible_passengers = PASSENGERS.filter_by_status_waiting() \
+                    .filter_by_floor(floor) \
+                    .filter_by_direction(self.next_dir) \
+                    .filter_by_lift_assigned_not_to_other_only(self)
+            if self.has_capacity_for(eligible_passengers):
+                selection = eligible_passengers.df
+            else:
+                if onboarding_mode == 'random':
+                    selection = eligible_passengers.sample_passengers(self.capacity - self.passenger_count)
+                elif onboarding_mode == 'earliest':
+                    selection = eligible_passengers.filter_dir_for_earliest_arrival(
+                        self.dir, self.capacity - self.passenger_count
+                    )
+            passenger_list = PassengerList(selection)
+            return passenger_list.count_passengers()
 
     async def onboard_all(self, bypass_prev_assignment=True):
         """onboard all passengers on the same floor without regarding lift capacity"""
@@ -119,11 +185,11 @@ class Lift:
         if bypass_prev_assignment:
             eligible_passengers = PASSENGERS.filter_by_status_waiting() \
                 .filter_by_floor(floor) \
-                .filter_by_direction(self.dir)
+                .filter_by_direction(self.next_dir)
         else:
             eligible_passengers = PASSENGERS.filter_by_status_waiting() \
                 .filter_by_floor(floor) \
-                .filter_by_direction(self.dir) \
+                .filter_by_direction(self.next_dir) \
                 .filter_by_lift_assigned_not_to_other_only(self)
         if self.has_capacity_for(eligible_passengers):
             selection = eligible_passengers.df
@@ -154,6 +220,7 @@ class Lift:
             await asyncio.sleep(time_to_onboard)
         self.log(f"{self.name}: Onboarding {num_to_onboard} passengers at floor {floor.name}")
 
+    # to init test
     async def onboard_earliest_arrival(self, bypass_prev_assignment=True):
         "onboards passengers on the same floor by earliest assignment if capacity is insufficient"
         floor = FLOOR_LIST.get_floor(self.floor)
@@ -179,7 +246,7 @@ class Lift:
         num_to_onboard = passenger_list.count_passengers()
         if num_to_onboard == 0:
             return None
-        time_to_onboard = boarding_time(self, self.passenger_count, 0, num_to_onboard)
+        time_to_board = boarding_time(self, self.passenger_count, 0, num_to_onboard)
 
         PASSENGERS.assign_lift_for_selection(self, passenger_list, assign_multi=False)
         PASSENGERS.board(passenger_list)
@@ -191,10 +258,20 @@ class Lift:
         self.passengers.board(passenger_list)
         self.calculate_passenger_count()
 
-        if time_to_onboard > 0:
-            self.detail_log(f'onboarding {num_to_onboard} passengers takes {time_to_onboard} s')
-            await asyncio.sleep(time_to_onboard)
+        if time_to_board > 0:
+            self.detail_log(f'onboarding {num_to_onboard} passengers takes {time_to_board} s')
+        await self.assign_passengers_while_boarding(time_to_board)
         self.log(f"{self.name}: Onboarding {num_to_onboard} passengers at floor {floor.name}")
+
+    # to init test
+    def precalc_num_to_offboard(self, offboarding_mode):
+        if offboarding_mode == 'all':
+            return self.passenger_count
+        elif offboarding_mode == 'arrived':
+            current_floor = FLOOR_LIST.get_floor(self.floor)
+            to_offboard = self.passengers.filter_by_destination(current_floor)
+
+            return to_offboard.count_passengers()
 
     async def offboard_all(self):
         floor = FLOOR_LIST.get_floor(self.floor)
@@ -215,6 +292,7 @@ class Lift:
         self.calculate_passenger_count()
         self.log(f"{self.name}: Updated passenger count {self.passenger_count}")
 
+    # to init test
     async def offboard_arrived(self):
         current_floor = FLOOR_LIST.get_floor(self.floor)
         to_offboard = self.passengers.filter_by_destination(current_floor)
@@ -224,16 +302,28 @@ class Lift:
         num_to_offboard = to_offboard.count_passengers()
         if num_to_offboard == 0:
             return None
-        time_to_offboard = boarding_time(self, self.passenger_count, num_to_offboard, 0)
-        if time_to_offboard > 0:
-            self.detail_log(f'offboarding {num_to_offboard} passengers takes {time_to_offboard} s')
-            await asyncio.sleep(time_to_offboard)
+        time_to_board = boarding_time(self, self.passenger_count, num_to_offboard, 0)
+        if time_to_board > 0:
+            self.detail_log(f'offboarding {num_to_offboard} passengers takes {time_to_board} s')        
+        await self.assign_passengers_while_boarding(time_to_board)
 
         self.log("{self.name}: Offboarding {num_to_offboard} passengers at floor {current_floor.name}")
         self.passengers.remove_passengers(to_offboard)
         self.calculate_passenger_count()
         PASSENGERS.update_arrival(to_offboard)
         self.log(f"{self.name}: Updated passenger count {self.passenger_count}")
+
+    # to init test
+    def precalc_loading_time(self, offboarding_mode, onboarding_mode):
+        num_to_offboard = self.precalc_num_to_offboard(offboarding_mode=offboarding_mode)
+        num_to_onboard = self.precalc_num_to_onboard(onboarding_mode=onboarding_mode)
+
+        from metrics.BoardingTime import boarding_time
+
+        time_to_onboard = boarding_time(self, self.passenger_count, 0, num_to_onboard)
+        time_to_offboard = boarding_time(self, self.passenger_count, num_to_offboard, 0)
+
+        return time_to_offboard + time_to_onboard
 
     # to test
     async def move(self, floor):
@@ -393,8 +483,15 @@ class Lift:
             target_floor = FLOOR_LIST.get_floor(self.redirect_state['target_floor'])
         return self.get_moving_status_in_loop(time_elapsed, target_floor)
     
-    def get_reaching_time(self, time_after, proposed_target_height):
-        moving_status = self.get_moving_status(time_after)
+    # to init test
+    def get_reaching_time(self, time, proposed_target_height):
+        if self.loading_state is not False:
+            current_height = FLOOR_LIST.get_floor(self.floor).height
+            loading_time = self.precalc_loading_time(offboarding_mode='arrived', onboarding_mode='earliest')
+            time_to_move = self.model.calc_time(abs(proposed_target_height - current_height))
+            time_to_load = loading_time - (time - self.loading_state['start_load_time'])
+            return time_to_load + time_to_move
+        moving_status = self.get_moving_status(time)
         if moving_status.get_stoppability(proposed_target_height):
             return moving_status.calc_time(proposed_target_height)
         else:
@@ -661,13 +758,17 @@ class Lift:
     #TODO: function for assigning passengers for lifts that are boarding
 
     async def loading(self, print_lift_stats = False, print_passenger_stats=False):
-        # TODO: pre-calculate time for use in redirection calculation
-        # TODO: send the time taken into PassengerList.lift_search_redirect_gen for queueing
+        loading_start_time = datetime.now()
+        self.loading_state = {
+            'stopping_floor': self.floor,
+            'start_load_time': loading_start_time
+        }
         await self.offboard_arrived()
         await self.onboard_earliest_arrival()
         PASSENGERS.update_passenger_metrics(print_passenger_stats, FLOOR_LIST)
         if print_lift_stats:
             self.pprint_current_passengers()
+        self.loading_state = False
 
     def pprint_current_passengers(self):
         def passenger_time_format(t):

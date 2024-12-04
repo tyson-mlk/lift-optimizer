@@ -14,7 +14,10 @@ pp12 = base.PassengerList.PassengerList(pd.concat([p1_df, p2_df]))
 p_list.passenger_list_arrival(pp12)
 # p_list.passenger_arrival(base.Passenger.Passenger('000', '010', datetime.now()))
 # p_list.passenger_arrival(base.Passenger.Passenger('000', '002', datetime.now()))
-p_list.passenger_arrival(base.Passenger.Passenger('010', '000', datetime.now()))
+async def arrive_one_passenger():
+    await p_list.passenger_arrival(base.Passenger.Passenger('010', '000', datetime.now()))
+
+asyncio.run(arrive_one_passenger())
 
 f_list = base.FloorList.FLOOR_LIST
 ground = f_list.get_floor('000')
