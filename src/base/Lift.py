@@ -103,7 +103,6 @@ class Lift:
         except asyncio.TimeoutError:
             pass
     
-    # to init test
     def precalc_num_to_onboard(self, onboarding_mode, bypass_prev_assignment=True):
         """
         preliminary calculation for number of passengers to onboard
@@ -138,6 +137,8 @@ class Lift:
                     selection = eligible_passengers.filter_dir_for_earliest_arrival(
                         self.dir, self.capacity - self.passenger_count
                     )
+                else:
+                    raise ValueError('Invalid onboarding_mode')
             passenger_list = PassengerList(selection)
             return passenger_list.count_passengers()
 
@@ -220,7 +221,6 @@ class Lift:
             await asyncio.sleep(time_to_onboard)
         self.log(f"{self.name}: Onboarding {num_to_onboard} passengers at floor {floor.name}")
 
-    # to init test
     async def onboard_earliest_arrival(self, bypass_prev_assignment=True):
         "onboards passengers on the same floor by earliest assignment if capacity is insufficient"
         floor = FLOOR_LIST.get_floor(self.floor)
@@ -263,7 +263,6 @@ class Lift:
         await self.assign_passengers_while_boarding(time_to_board)
         self.log(f"{self.name}: Onboarding {num_to_onboard} passengers at floor {floor.name}")
 
-    # to init test
     def precalc_num_to_offboard(self, offboarding_mode):
         if offboarding_mode == 'all':
             return self.passenger_count
@@ -292,7 +291,6 @@ class Lift:
         self.calculate_passenger_count()
         self.log(f"{self.name}: Updated passenger count {self.passenger_count}")
 
-    # to init test
     async def offboard_arrived(self):
         current_floor = FLOOR_LIST.get_floor(self.floor)
         to_offboard = self.passengers.filter_by_destination(current_floor)
@@ -307,13 +305,12 @@ class Lift:
             self.detail_log(f'offboarding {num_to_offboard} passengers takes {time_to_board} s')        
         await self.assign_passengers_while_boarding(time_to_board)
 
-        self.log("{self.name}: Offboarding {num_to_offboard} passengers at floor {current_floor.name}")
+        self.log(f"{self.name}: Offboarding {num_to_offboard} passengers at floor {current_floor.name}")
         self.passengers.remove_passengers(to_offboard)
         self.calculate_passenger_count()
         PASSENGERS.update_arrival(to_offboard)
         self.log(f"{self.name}: Updated passenger count {self.passenger_count}")
 
-    # to init test
     def precalc_loading_time(self, offboarding_mode, onboarding_mode):
         num_to_offboard = self.precalc_num_to_offboard(offboarding_mode=offboarding_mode)
         num_to_onboard = self.precalc_num_to_onboard(onboarding_mode=onboarding_mode)
@@ -330,7 +327,7 @@ class Lift:
         "moves to floor, responds to new async requests"
         current_floor = FLOOR_LIST.get_floor(self.floor)
         time_to_move = self.calc_time_to_move(current_floor, floor)
-        print(f'{self.name} schedule to arrive in {round(time_to_move, 2)}')
+        print(f'{self.name} schedule to arrive at {floor.name} in {round(time_to_move, 2)}')
         self.detail_log(f'time to move is {time_to_move}')
         if floor.height > self.height:
             self.dir = 'U'
@@ -483,13 +480,12 @@ class Lift:
             target_floor = FLOOR_LIST.get_floor(self.redirect_state['target_floor'])
         return self.get_moving_status_in_loop(time_elapsed, target_floor)
     
-    # to init test
     def get_reaching_time(self, time, proposed_target_height):
         if self.loading_state is not False:
             current_height = FLOOR_LIST.get_floor(self.floor).height
             loading_time = self.precalc_loading_time(offboarding_mode='arrived', onboarding_mode='earliest')
             time_to_move = self.model.calc_time(abs(proposed_target_height - current_height))
-            time_to_load = loading_time - (time - self.loading_state['start_load_time'])
+            time_to_load = loading_time - (time - self.loading_state['start_load_time']).total_seconds()
             return time_to_load + time_to_move
         moving_status = self.get_moving_status(time)
         if moving_status.get_stoppability(proposed_target_height):
@@ -537,6 +533,7 @@ class Lift:
         baseline for lift target algorithm
         attends to the most immediate request
         """
+        self.check_turn_back()
         lift_targets = self.passengers.passenger_target_scan().rename(
             columns={'target': 'lift_target'}
         )
@@ -546,6 +543,13 @@ class Lift:
         )
         overall_targets = pd.concat([lift_targets, waiting_targets])
         return self.find_next_lift_target(overall_targets)
+    
+    def check_turn_back(self):
+        furthest_target, furthest_dir = self.find_furthest_target_dir()
+        if self.floor == furthest_target and self.dir != furthest_dir:
+            self.dir = furthest_dir
+            self.log(f"{self.name}: maximal floor turn back to {self.dir}")
+            print(f"{self.name}: maximal floor turn back to {self.dir}")
         
     def find_next_lift_target(self, targets):
         if targets.shape[0] == 0:
