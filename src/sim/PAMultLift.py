@@ -31,12 +31,12 @@ for source in FLOOR_LIST.list_floors():
             # trip_arrival_rates[key] = 0.00005 # sparse request
             # trip_arrival_rates[key] = 0.003 # one lift busy
             # trip_arrival_rates[key] = 0.006 # two lifts busy
-            trip_arrival_rates[key] = 0.012 # many lifts
+            trip_arrival_rates[key] = 0.012 # five lifts busy
         else:
             # trip_arrival_rates[key] = 0.00005 # sparse request
             # trip_arrival_rates[key] = 0.0002 # one lift busy
             # trip_arrival_rates[key] = 0.0004 # two lifts busy
-            trip_arrival_rates[key] = 0.001 # two lifts busy
+            trip_arrival_rates[key] = 0.001 # five lifts busy
 
 def increment_counter(counter_type):
     COUNTERS[counter_type] += 1
@@ -94,7 +94,7 @@ async def lift_operation():
     )
 
 async def main():
-    timeout = 800
+    timeout = 3600
     start_time = datetime.now()
     start_time.hour
     try:

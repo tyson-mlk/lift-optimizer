@@ -95,14 +95,16 @@ class PassengerList:
             PassengerList.schema
         )
     
-    # to init test
     async def register_arrivals(self, passenger):
         msg = passenger.source, passenger.target, passenger.dir
+        print('ARRIVAL', msg)
         search_redirect_lift = self.lift_search_redirect_gen(passenger.source, passenger.dir)
         for next_lift in iter(search_redirect_lift):
             next_lift.passengers.arrival_queue.put_nowait(msg)
-            redirected = await self.lift_msg_queue.get()
-            if redirected:
+            print(f'{next_lift.name} from {next_lift.floor} evaluating for', msg)
+            assigned = await self.lift_msg_queue.get()
+            print(f'ASSIGNED status {assigned}')
+            if assigned:
                 break
 
     def register_lift(self, lift):
