@@ -28,8 +28,10 @@ class PassengerList:
         self.name = p_list_name
         if p_list_name is not None:
             logger = get_logger(p_list_name, self.__class__.__name__, INFO)
+            pa_assignment_logger = get_logger(p_list_name+'_arr_ass', self.__class__.__name__, DEBUG)
             self.log = lambda msg: logger.info(msg)
             self.log(f"{p_list_name}: init")
+            self.custom_log = lambda msg: pa_assignment_logger.debug(msg)
         else:
             self.log = lambda *args: None
         if passenger_list_df is not None:
@@ -97,13 +99,15 @@ class PassengerList:
     
     async def register_arrivals(self, passenger):
         msg = passenger.source, passenger.target, passenger.dir
-        print('ARRIVAL', msg)
+        self.custom_log(f"arrival of {passenger.id}")
         search_redirect_lift = self.lift_search_redirect_gen(passenger.source, passenger.dir)
+        self.custom_log(f"search order for {passenger.id} {self.lift_search_redirect(passenger.source, passenger.dir)}")
         for next_lift in iter(search_redirect_lift):
             next_lift.passengers.arrival_queue.put_nowait(msg)
             print(f'{next_lift.name} from {next_lift.floor} evaluating for', msg)
+            self.custom_log(f"evaluating {passenger.id} for {next_lift.name}")
             assigned = await self.lift_msg_queue.get()
-            print(f'ASSIGNED status {assigned}')
+            self.custom_log(f"evaluation {passenger.id} for {next_lift.name} is {assigned}")
             if assigned:
                 break
 
@@ -111,7 +115,6 @@ class PassengerList:
         assert hasattr(self, 'tracking_lifts')
         self.tracking_lifts += [lift]
 
-    # to init test
     def lift_search_redirect_gen(self, arrival_source, arrival_dir):
         time = datetime.now()
         lift_order = {}
@@ -127,6 +130,19 @@ class PassengerList:
                 lift_order[lift] = time_to_reach
         for sorted_lift in sorted(lift_order.items(), key=lambda x: x[1]):
             yield sorted_lift[0]
+
+    def lift_search_redirect(self, arrival_source, arrival_dir):
+        "for debugging of lift search order"
+        time = datetime.now()
+        lift_order = {}
+
+        from base.FloorList import FLOOR_LIST
+        target_height = FLOOR_LIST.get_floor(arrival_source).height
+        for lift in PASSENGERS.tracking_lifts:
+            time_to_reach = lift.get_reaching_time(time, target_height)
+            if lift.dir == arrival_dir and time_to_reach is not None:
+                lift_order[lift] = time_to_reach
+        return [(lift_item[0].name, lift_item[1]) for lift_item in sorted(lift_order.items(), key=lambda x: x[1])]
     
     def count_passengers(self) -> int:
         return self.df.shape[0]

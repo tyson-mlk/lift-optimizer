@@ -403,12 +403,12 @@ class Lift:
                         self.dir = single_floor_dir
                         self.log(f"{self.name}: lone floor directed to {self.dir}")
                         print(f"{self.name}: lone floor directed to {self.dir}")
-                elif self.dir in ['U', 'D']:
-                    furthest_target, furthest_dir = self.find_furthest_target_dir()
-                    if floor.name == furthest_target and self.dir != furthest_dir:
-                        self.dir = furthest_dir
-                        self.log(f"{self.name}: maximal floor turn back to {self.dir}")
-                        print(f"{self.name}: maximal floor turn back to {self.dir}")
+                # elif self.dir in ['U', 'D']:
+                #     furthest_target, furthest_dir = self.find_furthest_target_dir()
+                #     if floor.name == furthest_target and self.dir != furthest_dir:
+                #         self.dir = furthest_dir
+                #         self.log(f"{self.name}: maximal floor turn back to {self.dir}")
+                #         print(f"{self.name}: maximal floor turn back to {self.dir}")
             else:
                 self.dir = self.next_dir
                 self.log(f"{self.name}: next request dir {self.dir}")
@@ -544,7 +544,7 @@ class Lift:
         baseline for lift target algorithm
         attends to the most immediate request
         """
-        self.turn_back()
+        self.check_to_turn_back()
         lift_targets = self.passengers.passenger_target_scan().rename(
             columns={'target': 'lift_target'}
         )
@@ -573,7 +573,7 @@ class Lift:
         overall_targets = pd.concat([lift_targets, passengers_to_board_targets, waiting_targets])
         return self.find_next_lift_target(overall_targets)
     
-    def turn_back(self):
+    def check_to_turn_back(self):
         furthest_target, furthest_dir = self.find_furthest_target_dir()
         if self.floor == furthest_target and self.dir != furthest_dir:
             self.dir = furthest_dir
@@ -628,7 +628,7 @@ class Lift:
             (lift_targets.lift_target == min(FLOOR_LIST.list_floors())) & (lift_targets.dir == 'D')
         )
         lift_targets = lift_targets.loc[~to_exclude,:]
-        passengers_in_wait = PassengerList(PASSENGERS.df.loc[PASSENGERS.df.lift == 'Unassigned', :])
+        passengers_in_wait = PASSENGERS.filter_by_status_waiting().filter_by_lift_assigned_not_to_other_only(self)
         waiting_targets = passengers_in_wait.passenger_source_scan().rename(
             columns={'source': 'lift_target'}
         )
