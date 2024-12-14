@@ -82,5 +82,7 @@ async def main():
             await asyncio.gather(all_arrivals(), lift_operation())
     except asyncio.TimeoutError:
         print('timeout: save passengers to file')
+        time_start_str = f'{start_time.hour:02}_{start_time.minute:02}_{start_time.second:02}'
+        out_file = f'../data/PASimOneLift_{time_start_str}.csv'
         PASSENGERS.df.sort_values(['status', 'dir', 'source', 'trip_start_time']) \
-            .to_csv(f'./PASimOneLift_{start_time.hour:02}_{start_time.minute:02}_{start_time.second:02}.csv')
+            .to_csv(out_file)
