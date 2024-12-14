@@ -95,6 +95,8 @@ class Lift:
                             self.unassign_passengers(prev_new_source, prev_new_dir)
                         self.update_next_dir(floor.name)
                         new_passenger_arrival_at = datetime.now()
+                        self.loading_state['start_load_time'] = new_passenger_arrival_at
+                        self.loading_state['current_target'] = self.precalc_next_target_after_loading()
                         time_taken_to_arrive = (new_passenger_arrival_at - boarding_time_from).total_seconds()
                         print(f"{self.name}: at floor {self.floor} facing {self.dir} "
                               f"while loading assigned to floor {floor.name} dir {self.next_dir} "
@@ -105,7 +107,7 @@ class Lift:
                         first_assignment = False
                         prev_new_source, prev_new_dir = new_source, new_dir
                         PASSENGERS.lift_msg_queue.put_nowait(True)
-                        break
+                        continue
                 PASSENGERS.lift_msg_queue.put_nowait(False)
         except asyncio.TimeoutError:
             pass
@@ -311,7 +313,7 @@ class Lift:
             return None
         time_to_board = boarding_time(self, self.passenger_count, num_to_offboard, 0)
         if time_to_board > 0:
-            self.detail_log(f'offboarding {num_to_offboard} passengers takes {time_to_board} s')        
+            self.detail_log(f'offboarding {num_to_offboard} passengers takes {time_to_board} s')
         await self.assign_passengers_while_boarding(time_to_board)
 
         self.log(f"{self.name}: Offboarding {num_to_offboard} passengers at floor {current_floor.name}")
@@ -391,6 +393,7 @@ class Lift:
                                 'target_floor': floor.name,
                                 'time_of_redirect': time_since_latest_move
                             }
+                            continue
                     print(f'{self.name}. no redirect')
                     PASSENGERS.lift_msg_queue.put_nowait(redirect)
         except asyncio.TimeoutError:

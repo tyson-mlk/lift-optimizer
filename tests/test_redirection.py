@@ -43,13 +43,13 @@ async def track():
     await asyncio.sleep(0.7)
     # passenger assigned lift l1 at 0.7 s
     assert l1.floor_move_state['target_floor'] == '005'
-    await asyncio.sleep(0.5)
+    await asyncio.sleep(0.8)
     # second passenger arrived
     assert PASSENGERS.count_passengers() == 2
-    # lift reassigned to floor 002 at 1.2 s
-    assert l1.floor_move_state['target_floor'] == '005'
-    await asyncio.sleep(5.1)
-    # lift arrived to floor 002 at 6.3 s
+    # lift redirected to floor 002 at 1.5 s
+    assert l1.redirect_state['target_floor'] == '002'
+    await asyncio.sleep(5)
+    # lift arrived to floor 002 at 6.5 s
     assert l1.floor == '002'
 
 async def main():
@@ -60,6 +60,6 @@ async def main():
         async with asyncio.timeout(timeout):
             await asyncio.gather(all_arrivals(), lift_operation(), track())
     except asyncio.TimeoutError:
-        print('timeout')
+        pass
 
 asyncio.run(main())

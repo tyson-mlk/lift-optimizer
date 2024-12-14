@@ -8,15 +8,22 @@ async def passenger_arrival(source_floor, target_floor, start_time):
     new_passenger = Passenger(source_floor, target_floor, start_time)
     await PASSENGERS.passenger_arrival(new_passenger)
 
-async def passenger_arrives_event():
-    await passenger_arrival('000', '001', datetime.now())
+async def job_start():
+    await passenger_arrival('000', '005', datetime.now())
+    print('job_start passenger arrived', datetime.now())
+    await asyncio.sleep(0)
+
+async def job_reload():
+    await asyncio.sleep(0.2)
+    await passenger_arrival('002', '003', datetime.now())
+    print('job_reload passenger arrived', datetime.now())
     await asyncio.sleep(0)
 
 # simulates run of multiple continuous exponential processes in fixed time
 async def all_arrivals():
-    jobs = [passenger_arrives_event()]
+    jobs = [job_start(), job_reload()]
     start_time = datetime.now()
-    print(f'test start: {start_time}')
+    print(f'all start: {start_time}')
     await asyncio.gather(*jobs)
     
 async def lift_operation():
@@ -30,17 +37,24 @@ async def lift_operation():
 
 async def track():
     await asyncio.sleep(0)
-    # test for initial state after passenger arrival
-    assert (PASSENGERS.df.loc[1,['current', 'status', 'lift']].values == ['000', 'Waiting', 'Unassigned']).all()
+    # first passenger arrived
+    assert PASSENGERS.count_passengers() == 1
+    l1 = PASSENGERS.tracking_lifts[0]
+    await asyncio.sleep(0.1)
+    # passenger assigned lift l1 at 0.1 s
+    assert l1.loading_state['current_target'] == '005'
     await asyncio.sleep(0.2)
-    # test for passenger lift assigned after 0.2 s
-    assert (PASSENGERS.df.loc[1,['current', 'status', 'lift']].values == ['000', 'Onboard', 'L1']).all()
-    await asyncio.sleep(5.8)
-    # test for destination arrived after 6 s
-    assert (PASSENGERS.df.loc[1,['current', 'status', 'lift']].values == ['001', 'Arrived', 'L1']).all()
+    # second passenger arrived
+    assert PASSENGERS.count_passengers() == 2
+    # lift reassigned to floor 002 at 0.3 s
+    assert l1.loading_state['current_target'] == '002'
+    await asyncio.sleep(6.1)
+    # lift arrived to floor 002 at 6.4 s
+    print(l1.floor)
+    assert l1.floor == '002'
 
 async def main():
-    timeout = 10
+    timeout = 7
     start_time = datetime.now()
     start_time.hour
     try:
