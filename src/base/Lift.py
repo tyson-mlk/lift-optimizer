@@ -76,6 +76,12 @@ class Lift:
     def is_vacant(self):
         return self.passenger_count == 0
     
+    def is_stopped(self):
+        return self.dir == 'S'
+    
+    def set_stopped(self):
+        self.dir = 'S'
+    
     async def assign_passengers_while_boarding(self, time_to_board):
         try:
             first_assignment = True
@@ -96,7 +102,11 @@ class Lift:
                         self.update_next_dir(floor.name)
                         new_passenger_arrival_at = datetime.now()
                         self.loading_state['start_load_time'] = new_passenger_arrival_at
-                        self.loading_state['current_target'] = self.precalc_next_target_after_loading()
+                        new_target = self.precalc_next_target_after_loading()
+                        if new_target is not None:
+                            self.loading_state['current_target'] = new_target
+                        else:
+                            del self.loading_state['current_target']
                         time_taken_to_arrive = (new_passenger_arrival_at - boarding_time_from).total_seconds()
                         print(f"{self.name}: at floor {self.floor} facing {self.dir} "
                               f"while loading assigned to floor {floor.name} dir {self.next_dir} "
@@ -344,8 +354,6 @@ class Lift:
             self.dir = 'U'
         elif floor.height < self.height:
             self.dir = 'D'
-        else:
-            self.dir = 'S'
         self.log(f"{self.name}: Start move from {current_floor.name} height {current_floor.height} at dir {self.dir}")
 
         time_since_latest_move = datetime.now()
@@ -404,6 +412,7 @@ class Lift:
                     single_floor_dir = self.find_single_passenger_floor()
                     if single_floor_dir is not None:
                         self.dir = single_floor_dir
+                        self.next_dir = 'S'
                         self.log(f"{self.name}: lone floor directed to {self.dir}")
                         print(f"{self.name}: lone floor directed to {self.dir}")
                 # elif self.dir in ['U', 'D']:
@@ -447,6 +456,7 @@ class Lift:
             single_floor_dir = self.find_single_passenger_floor()
             if single_floor_dir is not None:
                 self.dir = single_floor_dir
+                self.next_dir = 'S'
                 self.log(f"{self.name}: lone floor directed to {self.dir}")
         elif self.dir in ['U', 'D']:
             furthest_target, furthest_dir = self.find_furthest_target_dir()
@@ -542,21 +552,31 @@ class Lift:
         )
         return self.find_next_lift_target(passenger_targets)
     
+    # to test
     def next_baseline_target(self):
         """
         baseline for lift target algorithm
         attends to the most immediate request
         """
-        self.check_to_turn_back()
-        lift_targets = self.passengers.passenger_target_scan().rename(
-            columns={'target': 'lift_target'}
-        )
-        passengers_in_wait = PASSENGERS.filter_by_status_waiting().filter_by_lift_assigned_not_to_other_only(self)
-        waiting_targets = passengers_in_wait.passenger_source_scan().rename(
-            columns={'source': 'lift_target'}
-        )
-        overall_targets = pd.concat([lift_targets, waiting_targets])
-        return self.find_next_lift_target(overall_targets)
+        if not self.is_stopped():
+            self.check_to_turn_back()
+            lift_targets = self.passengers.passenger_target_scan().rename(
+                columns={'target': 'lift_target'}
+            )
+            passengers_in_wait = PASSENGERS.filter_by_status_waiting() \
+                .filter_by_lift_assigned_not_to_other_only(self)
+            waiting_targets = passengers_in_wait.passenger_source_scan().rename(
+                columns={'source': 'lift_target'}
+            )
+            overall_targets = pd.concat([lift_targets, waiting_targets])
+            return self.find_next_lift_target(overall_targets)
+        else:
+            passengers_in_wait = PASSENGERS.filter_by_status_waiting() \
+                .filter_by_lift_assigned_not_to_other_only(self)
+            targets = passengers_in_wait.passenger_source_scan().rename(
+                columns={'source': 'lift_target'}
+            )
+            return self.find_nearest_floor(targets)
     
     def precalc_next_target_after_loading(self):
         lift_targets = self.passengers.passenger_target_scan().rename(
@@ -616,6 +636,15 @@ class Lift:
                 return floor_scan.lift_target.min()
 
             return targets.lift_target.max()
+        
+    # to init test
+    def find_nearest_floor(self, targets):
+        if targets.shape[0] == 0:
+            return None
+        
+        floor_heights = {f:FLOOR_LIST.get_floor(f).height for f in targets.lift_target}
+        floor_dist = {f:abs(self.height - floor_heights[f]) for f in floor_heights}
+        return sorted(floor_dist.items(), key=lambda x: x[1])[0]
         
     def find_furthest_target_dir(self):
         """
@@ -695,13 +724,14 @@ class Lift:
     
     def update_next_dir(self, target_floor):
         if target_floor is None:
-            self.next_dir = None
+            self.next_dir = 'S'
             return None
         # updates next floor and direction
         furthest_floor, furthest_dir = self.find_furthest_target_dir()
-        if furthest_floor == None:
-            self.next_dir = None
-            return None
+        assert furthest_floor is not None
+        # if furthest_floor == None:
+        #     self.next_dir = None
+        #     return None
         if furthest_floor == target_floor and furthest_dir != self.dir:
             self.next_dir = 'D' if self.dir == 'U' else 'U'
         else:
@@ -757,15 +787,15 @@ class Lift:
         print(f'{self.name} start baseline operation')
         await asyncio.sleep(0)
         next_target = self.next_baseline_target()
-        print(f'{self.name} lift next target {next_target}')
-        self.update_next_dir(next_target)
-        print(f'{self.name} lift next direction {self.next_dir}')
-        self.assign_passengers(next_target, assign_multi=True)
-        # print('debug passenger assignment')
-        # PASSENGERS.pprint_passenger_status(FLOOR_LIST, ordering_type='source')
+        print(f'{self.name} lift new target {next_target}')
         while True:
             if next_target is not None:
                 # baseline allows multi assignment after floor is chosen
+                self.update_next_dir(next_target)        
+                print(f'{self.name} lift next direction {self.next_dir}')
+                self.assign_passengers(next_target, assign_multi=True)
+                # print('debug passenger assignment')
+                # PASSENGERS.pprint_passenger_status(FLOOR_LIST, ordering_type='source')
                 print(f'{self.name} lift moving to target {next_target}')
                 next_floor = FLOOR_LIST.get_floor(next_target)
                 await self.move(next_floor)
@@ -779,31 +809,24 @@ class Lift:
                 await asyncio.sleep(0)
                 next_target = self.next_baseline_target()
                 print(f'{self.name} lift new target {next_target}')
-                self.update_next_dir(next_target)
-                print(f'{self.name} lift next direction {self.next_dir}')
-                self.assign_passengers(next_target, assign_multi=True)
-                # print('debug passenger assignment')
-                # PASSENGERS.pprint_passenger_status(FLOOR_LIST, ordering_type='source')
             else:
+                self.set_stopped()
                 await asyncio.sleep(0)
                 next_target = self.next_baseline_target()
                 if next_target is not None:
                     print(f'{self.name} lift new target {next_target}')
-                    self.update_next_dir(next_target)        
-                    print(f'{self.name} lift next direction {self.next_dir}')
-                    self.assign_passengers(next_target, assign_multi=True)
-                    # print('debug passenger assignment')
-                    # PASSENGERS.pprint_passenger_status(FLOOR_LIST, ordering_type='source')
-    
-    #TODO: function for assigning passengers for lifts that are boarding
 
     async def loading(self, print_lift_stats = False, print_passenger_stats=False):
         loading_start_time = datetime.now()
         self.loading_state = {
             'stopping_floor': self.floor,
             'start_load_time': loading_start_time,
-            'current_target': self.precalc_next_target_after_loading(),
         }
+        current_target = self.precalc_next_target_after_loading()
+        if current_target is not None:
+            self.loading_state['current_target'] = current_target
+        else:
+            del self.loading_state['current_target']
         await self.offboard_arrived()
         await self.onboard_earliest_arrival()
         PASSENGERS.update_passenger_metrics(print_passenger_stats, FLOOR_LIST)
