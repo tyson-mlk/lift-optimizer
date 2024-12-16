@@ -87,11 +87,11 @@ class Lift:
             first_assignment = True
             time_left_for_boarding = time_to_board
             arrival_queue = self.passengers.arrival_queue
+            boarding_time_from = datetime.now()
             while True:
-                boarding_time_from = datetime.now()
                 pa_trigger = asyncio.wait_for(arrival_queue.get(), timeout=time_left_for_boarding)
                 new_source, _, new_dir = await pa_trigger
-                print(f'{self.name}. evaluating while loading', new_source, _, new_dir)
+                # print(f'{self.name}. evaluating while loading', new_source, _, new_dir)
                 current_floor = FLOOR_LIST.get_floor(self.floor)
                 floor = FLOOR_LIST.get_floor(new_source)
                 if self.floor != new_source:
@@ -100,25 +100,38 @@ class Lift:
                         if not first_assignment:
                             self.unassign_passengers(prev_new_source, prev_new_dir)
                         self.update_next_dir(floor.name)
-                        new_passenger_arrival_at = datetime.now()
-                        self.loading_state['start_load_time'] = new_passenger_arrival_at
                         new_target = self.precalc_next_target_after_loading()
                         if new_target is not None:
                             self.loading_state['current_target'] = new_target
                         else:
                             del self.loading_state['current_target']
-                        time_taken_to_arrive = (new_passenger_arrival_at - boarding_time_from).total_seconds()
-                        print(f"{self.name}: at floor {self.floor} facing {self.dir} "
-                              f"while loading assigned to floor {floor.name} dir {self.next_dir} "
-                              f"after {time_taken_to_arrive}")
                         self.assign_passengers(floor.name, assign_multi=True)
-                        time_left_for_boarding -= time_taken_to_arrive
                         
                         first_assignment = False
                         prev_new_source, prev_new_dir = new_source, new_dir
                         PASSENGERS.lift_msg_queue.put_nowait(True)
-                        continue
+
+                        time_now = datetime.now()
+                        self.loading_state['start_load_time'] = time_now
+                        time_taken_to_arrive = (time_now - boarding_time_from).total_seconds()
+                        print(f"{self.name}: at floor {self.floor} facing {self.dir} "
+                              f"while loading assigned to floor {floor.name} dir {self.next_dir} "
+                              f"after {time_taken_to_arrive}")
+                        boarding_time_from = time_now
+                        time_left_for_boarding -= time_taken_to_arrive
+                        if time_left_for_boarding <= 0:
+                            break
+                        else:
+                            continue
                 PASSENGERS.lift_msg_queue.put_nowait(False)
+                time_now = datetime.now()
+                time_taken = (time_now - boarding_time_from).total_seconds()
+                boarding_time_from = time_now
+                time_left_for_boarding -= time_taken
+                if time_left_for_boarding <= 0:
+                    break
+                else:
+                    continue
         except asyncio.TimeoutError:
             pass
     
@@ -278,6 +291,7 @@ class Lift:
         self.passengers.assign_lift(self, assign_multi=False)
         self.passengers.board(passenger_list)
         self.calculate_passenger_count()
+        self.log(f"{self.name}: Updated passenger count {self.passenger_count}")
 
         if time_to_board > 0:
             self.detail_log(f'onboarding {num_to_onboard} passengers takes {time_to_board} s')
@@ -348,7 +362,7 @@ class Lift:
         "moves to floor, responds to new async requests"
         current_floor = FLOOR_LIST.get_floor(self.floor)
         time_to_move = self.calc_time_to_move(current_floor, floor)
-        print(f'{self.name} schedule to arrive at {floor.name} in {round(time_to_move, 2)}')
+        # print(f'{self.name} schedule to arrive at {floor.name} in {round(time_to_move, 2)}')
         self.detail_log(f'time to move is {time_to_move}')
         if floor.height > self.height:
             self.dir = 'U'
@@ -369,7 +383,7 @@ class Lift:
                     arrival_queue = self.passengers.arrival_queue
                     pa_trigger = asyncio.wait_for(arrival_queue.get(), timeout=None)
                     new_source, _, new_dir = await pa_trigger
-                    print(f'{self.name}. evaluating while moving', new_source, _, new_dir)
+                    # print(f'{self.name}. evaluating while moving', new_source, _, new_dir)
                     if  (
                         self.has_capacity() and 
                         self.is_within_next_target(current_floor, floor, self.dir, 
@@ -388,10 +402,11 @@ class Lift:
                             self.unassign_passengers(floor.name, self.next_dir)
                             floor = FLOOR_LIST.get_floor(new_source)
                             self.update_next_dir(floor.name)
-                            self.log(f"{self.name} redirect to floor {floor.name} dir  {self.next_dir} "
-                                     f"after {datetime.now()-time_since_latest_move}")
-                            print(f"{self.name} redirect to floor {floor.name} dir  {self.next_dir} "
-                                  f"after {datetime.now()-time_since_latest_move}"
+                            time_taken = (datetime.now()-time_since_latest_move).total_seconds()
+                            self.log(f"{self.name} redirect to floor {floor.name} dir {self.next_dir} "
+                                     f"after {round(time_taken, 2)}")
+                            print(f"{self.name} redirect to floor {floor.name} dir {self.next_dir} "
+                                  f"after {round(time_taken, 2)} "
                                   f"schedule to arrive in {round(time_to_move, 2)}")
                             self.assign_passengers(floor.name, assign_multi=True)
                             self.detail_log(f"{self.name} schedule to arrive in {round(time_to_move, 2)}")
@@ -402,7 +417,7 @@ class Lift:
                                 'time_of_redirect': time_since_latest_move
                             }
                             continue
-                    print(f'{self.name}. no redirect')
+                    # print(f'{self.name}. no redirect')
                     PASSENGERS.lift_msg_queue.put_nowait(redirect)
         except asyncio.TimeoutError:
             self.log(f"{self.name}: reached {floor.name} at height {floor.height}")
@@ -417,10 +432,9 @@ class Lift:
             #             print('TO TEST next dir assigned to S')
             #             self.log(f"{self.name}: lone floor directed to {self.dir}")
             #             print(f"{self.name}: lone floor directed to {self.dir}")
-            else:
-                self.dir = self.next_dir
-                self.log(f"{self.name}: next request dir {self.dir}")
-                print(f"{self.name}: next request dir {self.dir}")
+            self.dir = self.next_dir
+            self.log(f"{self.name}: latest dir {self.dir}")
+            print(f"{self.name}: latest dir {self.dir}")
 
             
             self.floor = floor.name
@@ -580,6 +594,7 @@ class Lift:
         lift_targets = self.passengers.passenger_target_scan().rename(
             columns={'target': 'lift_target'}
         )
+        lift_targets = lift_targets.loc[lift_targets.lift_target != self.floor,:]
         passengers_to_board_index = PASSENGERS.df.index.isin(self.precalc_num_to_onboard('earliest', return_index=True))
         passengers_to_board = PassengerList(PASSENGERS.df.loc[passengers_to_board_index, :])
         passengers_to_board_targets = passengers_to_board.passenger_target_scan().rename(
@@ -645,7 +660,7 @@ class Lift:
         floor_dist = {f:abs(self.height - floor_heights[f]) for f in floor_heights}
         return sorted(floor_dist.items(), key=lambda x: x[1])[0][0]
         
-    def find_furthest_target_dir(self):
+    def find_furthest_target_dir(self, remove_extremes=False):
         """
         baseline for lift target algorithm
         attends to the most immediate request
@@ -653,12 +668,13 @@ class Lift:
         lift_targets = self.passengers.passenger_target_scan().rename(
             columns={'target': 'lift_target'}
         )
-        to_exclude = (
-            (lift_targets.lift_target == max(FLOOR_LIST.list_floors())) & (lift_targets.dir == 'U')
-        ) | (
-            (lift_targets.lift_target == min(FLOOR_LIST.list_floors())) & (lift_targets.dir == 'D')
-        )
-        lift_targets = lift_targets.loc[~to_exclude,:]
+        if remove_extremes:
+            to_exclude = (
+                (lift_targets.lift_target == max(FLOOR_LIST.list_floors())) & (lift_targets.dir == 'U')
+            ) | (
+                (lift_targets.lift_target == min(FLOOR_LIST.list_floors())) & (lift_targets.dir == 'D')
+            )
+            lift_targets = lift_targets.loc[~to_exclude,:]
         passengers_in_wait = PASSENGERS.filter_by_status_waiting().filter_by_lift_assigned_not_to_other_only(self)
         waiting_targets = passengers_in_wait.passenger_source_scan().rename(
             columns={'source': 'lift_target'}
@@ -726,7 +742,7 @@ class Lift:
             self.set_stationed()
             return None
         if not self.is_stationed():
-            furthest_floor, furthest_dir = self.find_furthest_target_dir()
+            furthest_floor, furthest_dir = self.find_furthest_target_dir(remove_extremes=True)
             if furthest_floor == target_floor and furthest_dir != self.dir:
                 self.next_dir = 'D' if self.dir == 'U' else 'U'
             else:
@@ -804,8 +820,10 @@ class Lift:
                 await asyncio.sleep(0)
                 next_target = self.next_baseline_target()
                 print(f'{self.name} lift new target {next_target}')
+                self.log(f'{self.name} lift new target {next_target}')
                 self.update_next_dir(next_target)        
                 print(f'{self.name} lift next direction {self.next_dir}')
+                self.log(f'{self.name} lift next direction {self.next_dir}')
                 self.assign_passengers(next_target, assign_multi=True)
                 # print('debug passenger assignment')
                 # PASSENGERS.pprint_passenger_status(FLOOR_LIST, ordering_type='source')
