@@ -101,10 +101,6 @@ class Lift:
                             self.unassign_passengers(prev_new_source, prev_new_dir)
                         self.update_next_dir(floor.name)
                         new_target = self.precalc_next_target_after_loading()
-                        if new_target is not None:
-                            self.loading_state['current_target'] = new_target
-                        else:
-                            del self.loading_state['current_target']
                         self.assign_passengers(floor.name, assign_multi=True)
                         
                         first_assignment = False
@@ -113,6 +109,7 @@ class Lift:
 
                         time_now = datetime.now()
                         self.loading_state['start_load_time'] = time_now
+                        self.loading_state['current_target'] = new_target
                         time_taken_to_arrive = (time_now - boarding_time_from).total_seconds()
                         print(f"{self.name}: at floor {self.floor} facing {self.dir} "
                               f"while loading assigned to floor {floor.name} dir {self.next_dir} "
@@ -362,8 +359,7 @@ class Lift:
         "moves to floor, responds to new async requests"
         current_floor = FLOOR_LIST.get_floor(self.floor)
         time_to_move = self.calc_time_to_move(current_floor, floor)
-        # print(f'{self.name} schedule to arrive at {floor.name} in {round(time_to_move, 2)}')
-        self.detail_log(f'time to move is {time_to_move}')
+        self.detail_log(f'{self.name} schedule to arrive at {floor.name} in {round(time_to_move, 2)}')
         if floor.height > self.height:
             self.dir = 'U'
         elif floor.height < self.height:
@@ -845,11 +841,7 @@ class Lift:
             'stopping_floor': self.floor,
             'start_load_time': loading_start_time,
         }
-        current_target = self.precalc_next_target_after_loading()
-        if current_target is not None:
-            self.loading_state['current_target'] = current_target
-        else:
-            del self.loading_state['current_target']
+        self.loading_state['current_target'] = self.precalc_next_target_after_loading()
         await self.offboard_arrived()
         await self.onboard_earliest_arrival()
         PASSENGERS.update_passenger_metrics(print_passenger_stats, FLOOR_LIST)

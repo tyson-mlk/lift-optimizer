@@ -71,6 +71,7 @@ async def main():
         async with asyncio.timeout(timeout):
             await asyncio.gather(all_arrivals(), lift_operation(), track())
     except asyncio.TimeoutError:
-        print('timeout')
+        pass
 
 asyncio.run(main())
+print('tests passed')

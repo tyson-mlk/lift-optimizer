@@ -63,3 +63,4 @@ async def main():
         pass
 
 asyncio.run(main())
+print('tests passed')
