@@ -103,13 +103,15 @@ class PassengerList:
         search_redirect_lift = self.lift_search_redirect_gen(passenger.source, passenger.dir)
         self.custom_log(f"search order for {passenger.id} {self.lift_search_redirect(passenger.source, passenger.dir)}")
         for next_lift in iter(search_redirect_lift):
-            next_lift.passengers.arrival_queue.put_nowait(msg)
             print(f'{next_lift.name} from {next_lift.floor} evaluating for', msg)
+            next_lift.passengers.arrival_queue.put_nowait(msg)
             self.custom_log(f"evaluating {passenger.id} for {next_lift.name}")
             assigned = await self.lift_msg_queue.get()
+            print(f"evaluation {passenger.id} for {next_lift.name} is {assigned}")
             self.custom_log(f"evaluation {passenger.id} for {next_lift.name} is {assigned}")
             if assigned:
                 break
+        self.custom_log(f"done register arrivals for passenger {passenger.id}")
 
     def register_lift(self, lift):
         assert hasattr(self, 'tracking_lifts')
@@ -126,7 +128,7 @@ class PassengerList:
             #     target_height, arrival_dir, lift.get_stopping_height(time), lift.dir
             # )
             time_to_reach = lift.get_reaching_time(time, target_height)
-            if lift.dir == arrival_dir and time_to_reach is not None:
+            if (lift.dir == arrival_dir or lift.dir == 'S') and time_to_reach is not None:
                 lift_order[lift] = time_to_reach
         for sorted_lift in sorted(lift_order.items(), key=lambda x: x[1]):
             yield sorted_lift[0]

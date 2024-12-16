@@ -91,7 +91,7 @@ class Lift:
             while True:
                 pa_trigger = asyncio.wait_for(arrival_queue.get(), timeout=time_left_for_boarding)
                 new_source, _, new_dir = await pa_trigger
-                # print(f'{self.name}. evaluating while loading', new_source, _, new_dir)
+                self.log(f'{self.name}. evaluating while loading {new_source, _, new_dir}')
                 current_floor = FLOOR_LIST.get_floor(self.floor)
                 floor = FLOOR_LIST.get_floor(new_source)
                 if self.floor != new_source:
@@ -111,6 +111,9 @@ class Lift:
                         self.loading_state['start_load_time'] = time_now
                         self.loading_state['current_target'] = new_target
                         time_taken_to_arrive = (time_now - boarding_time_from).total_seconds()
+                        self.log(f"{self.name}: at floor {self.floor} facing {self.dir} "
+                                 f"while loading assigned to floor {floor.name} dir {self.next_dir} "
+                                 f"after {time_taken_to_arrive}")
                         print(f"{self.name}: at floor {self.floor} facing {self.dir} "
                               f"while loading assigned to floor {floor.name} dir {self.next_dir} "
                               f"after {time_taken_to_arrive}")
@@ -391,7 +394,7 @@ class Lift:
                         moving_status = self.get_moving_status_in_loop(time_elapsed, floor)
                         redirect = self.calc_is_floor_reachable_while_moving(moving_status, new_source)
                         if redirect:
-                            await asyncio.sleep(0)
+                            # await asyncio.sleep(0)
                             time_to_move = self.calc_time_to_move_while_moving(moving_status, new_source)
                             new_arrival_time = asyncio.get_running_loop().time() + time_to_move
                             timeout.reschedule(new_arrival_time)
@@ -412,8 +415,10 @@ class Lift:
                                 'target_floor': floor.name,
                                 'time_of_redirect': time_since_latest_move
                             }
+                            PASSENGERS.lift_msg_queue.put_nowait(redirect)
                             continue
-                    # print(f'{self.name}. no redirect')
+                    self.log(f'{self.name} no redirect')
+                    print(f'{self.name} no redirect')
                     PASSENGERS.lift_msg_queue.put_nowait(redirect)
         except asyncio.TimeoutError:
             self.log(f"{self.name}: reached {floor.name} at height {floor.height}")
@@ -513,7 +518,9 @@ class Lift:
             time_to_load = loading_time - (time - self.loading_state['start_load_time']).total_seconds()
             return time_to_load + time_to_move
         moving_status = self.get_moving_status(time)
-        if moving_status.get_stoppability(proposed_target_height):
+        if self.dir == 'S':
+            return moving_status.calc_time(proposed_target_height)
+        elif moving_status.get_stoppability(proposed_target_height):
             return moving_status.calc_time(proposed_target_height)
         else:
             return None
@@ -719,7 +726,7 @@ class Lift:
             return (
                 current_target.height > current_floor.height
             ) and (
-                current_target.height > proposed_target.height
+                current_target.height >= proposed_target.height
             ) and (
                 proposed_target.height > current_floor.height
             )
@@ -727,7 +734,7 @@ class Lift:
             return (
                 current_target.height < current_floor.height
             ) and (
-                current_target.height < proposed_target.height
+                current_target.height <= proposed_target.height
             ) and (
                 proposed_target.height < current_floor.height
             )
@@ -826,14 +833,23 @@ class Lift:
             else:
                 self.set_stationed()
                 await asyncio.sleep(0)
+                # to catch passenger arrivals instead of always running
+                # to test
+                arrival_queue = self.passengers.arrival_queue
+                pa_trigger = asyncio.wait_for(arrival_queue.get(), timeout=None)
+                new_source, _, new_dir = await pa_trigger
+                print(f'{self.name}. evaluating while stationed', new_source, _, new_dir)
+                self.log(f'{self.name}. evaluating while stationed {new_source, _, new_dir}')
                 next_target = self.next_baseline_target()
-                if next_target is not None:
-                    print(f'{self.name} lift new target {next_target}')
-                    self.update_next_dir(next_target)        
-                    print(f'{self.name} lift next direction {self.next_dir}')
-                    self.assign_passengers(next_target, assign_multi=True)
-                    # print('debug passenger assignment')
-                    # PASSENGERS.pprint_passenger_status(FLOOR_LIST, ordering_type='source')
+                print(f'{self.name} lift new target {next_target}')
+                self.update_next_dir(next_target)        
+                print(f'{self.name} lift next direction {self.next_dir}')
+                self.assign_passengers(next_target, assign_multi=True)
+                
+                assigned = new_source == next_target and new_dir == self.next_dir
+                PASSENGERS.lift_msg_queue.put_nowait(assigned)
+                # print('debug passenger assignment')
+                # PASSENGERS.pprint_passenger_status(FLOOR_LIST, ordering_type='source')
 
     async def loading(self, print_lift_stats = False, print_passenger_stats=False):
         loading_start_time = datetime.now()

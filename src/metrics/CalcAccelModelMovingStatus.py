@@ -41,7 +41,7 @@ class CalcAccelModelMovingStatus:
             return stopping_height >= new_height
 
     def calc_time(self, new_height):
-        if self.get_stoppability(new_height):
+        if self.get_stoppability(new_height) or self.direction == 'S':
             # calculate whether max speed will be reached
             time_to_max = (self.spec.max_v - self.velocity) / self.spec.a
             dist_to_max = time_to_max * (self.velocity + self.spec.max_v) / 2
