@@ -30,7 +30,7 @@ tenth = f_list.get_floor('010')
 pa0 = ground.passengers
 pa10 = tenth.passengers
 
-l1 = base.Lift.Lift('l1', '000', 'U')
+l1 = base.Lift.Lift('l1', '000', 'S')
 
 def print_status(prefix, lift):
     print(f"{prefix}. Lift {lift.name} at floor {lift.floor} facing {lift.dir} with {lift.passengers.count_passengers()} passengers on-board")
