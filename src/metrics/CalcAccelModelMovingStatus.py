@@ -9,6 +9,10 @@ class CalcAccelModelMovingStatus:
         self.direction = direction
         self.velocity = velocity
 
+    def __str__(self):
+        print_str = self.spec.__str__()
+        return f"{print_str}, height: {self.height}, direction: {self.direction}, velocity: {self.velocity}"
+
     @classmethod
     def get_dist_to_stop(cls, spec, velocity):
         return velocity ** 2 / spec.a / 2
@@ -32,12 +36,12 @@ class CalcAccelModelMovingStatus:
         assert self.direction in ['U', 'D']
         stopping_height = self.get_status_to_stop()[0]
         if self.direction == 'U':
-            return stopping_height < new_height
+            return stopping_height <= new_height
         else:
-            return stopping_height > new_height
+            return stopping_height >= new_height
 
     def calc_time(self, new_height):
-        if self.get_stoppability(new_height):
+        if self.get_stoppability(new_height) or self.direction == 'S':
             # calculate whether max speed will be reached
             time_to_max = (self.spec.max_v - self.velocity) / self.spec.a
             dist_to_max = time_to_max * (self.velocity + self.spec.max_v) / 2

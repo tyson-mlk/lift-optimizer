@@ -23,12 +23,15 @@ class PassengerList:
         'time_on_lift': 'Float64'
     }
 
-    def __init__(self, passenger_list_df = None, p_list_name = None, lift_tracking = False):
+    def __init__(self, passenger_list_df = None, p_list_name = None,
+                 lift_managing = False, lift_tracking = False):
         self.name = p_list_name
         if p_list_name is not None:
             logger = get_logger(p_list_name, self.__class__.__name__, INFO)
+            pa_assignment_logger = get_logger(p_list_name+'_arr_ass', self.__class__.__name__, DEBUG)
             self.log = lambda msg: logger.info(msg)
             self.log(f"{p_list_name}: init")
+            self.custom_log = lambda msg: pa_assignment_logger.debug(msg)
         else:
             self.log = lambda *args: None
         if passenger_list_df is not None:
@@ -47,6 +50,9 @@ class PassengerList:
             )
         if lift_tracking:
             self.arrival_queue = Queue()
+        if lift_managing:
+            self.lift_msg_queue = Queue()
+            self.tracking_lifts = []
 
     def __del__(self):
         self.log(f"{self.name}: destruct")
@@ -91,9 +97,54 @@ class PassengerList:
             PassengerList.schema
         )
     
-    def register_arrivals(self, passenger):
+    async def register_arrivals(self, passenger):
         msg = passenger.source, passenger.target, passenger.dir
-        self.arrival_queue.put_nowait(msg)
+        self.custom_log(f"arrival of {passenger.id}")
+        search_redirect_lift = self.lift_search_redirect_gen(passenger.source, passenger.dir)
+        self.custom_log(f"search order for {passenger.id} {self.lift_search_redirect(passenger.source, passenger.dir)}")
+        for next_lift in iter(search_redirect_lift):
+            print(f'{next_lift.name} from {next_lift.floor} evaluating for', msg)
+            next_lift.passengers.arrival_queue.put_nowait(msg)
+            self.custom_log(f"evaluating {passenger.id} for {next_lift.name}")
+            assigned = await self.lift_msg_queue.get()
+            print(f"evaluation {passenger.id} for {next_lift.name} is {assigned}")
+            self.custom_log(f"evaluation {passenger.id} for {next_lift.name} is {assigned}")
+            if assigned:
+                break
+        self.custom_log(f"done register arrivals for passenger {passenger.id}")
+
+    def register_lift(self, lift):
+        assert hasattr(self, 'tracking_lifts')
+        self.tracking_lifts += [lift]
+
+    def lift_search_redirect_gen(self, arrival_source, arrival_dir):
+        time = datetime.now()
+        lift_order = {}
+
+        from base.FloorList import FLOOR_LIST
+        target_height = FLOOR_LIST.get_floor(arrival_source).height
+        for lift in PASSENGERS.tracking_lifts:
+            # lift_order[lift] = FLOOR_LIST.height_queue_order(
+            #     target_height, arrival_dir, lift.get_stopping_height(time), lift.dir
+            # )
+            time_to_reach = lift.get_reaching_time(time, target_height)
+            if (lift.dir == arrival_dir or lift.dir == 'S') and time_to_reach is not None:
+                lift_order[lift] = time_to_reach
+        for sorted_lift in sorted(lift_order.items(), key=lambda x: x[1]):
+            yield sorted_lift[0]
+
+    def lift_search_redirect(self, arrival_source, arrival_dir):
+        "for debugging of lift search order"
+        time = datetime.now()
+        lift_order = {}
+
+        from base.FloorList import FLOOR_LIST
+        target_height = FLOOR_LIST.get_floor(arrival_source).height
+        for lift in PASSENGERS.tracking_lifts:
+            time_to_reach = lift.get_reaching_time(time, target_height)
+            if lift.dir == arrival_dir and time_to_reach is not None:
+                lift_order[lift] = time_to_reach
+        return [(lift_item[0].name, lift_item[1]) for lift_item in sorted(lift_order.items(), key=lambda x: x[1])]
     
     def count_passengers(self) -> int:
         return self.df.shape[0]
@@ -131,7 +182,7 @@ class PassengerList:
     def add_passenger_list(self, passenger_df: pd.DataFrame):
         self.df = pd.concat([self.df, passenger_df])
 
-    def passenger_arrival(self, passenger: Passenger):
+    async def passenger_arrival(self, passenger: Passenger):
         passenger_df = PassengerList.passenger_to_df(passenger)
         self.add_passenger_list(passenger_df)
         self.log(f"{self.name}: 1 new arrival; count is {self.count_traveling_passengers()}")
@@ -141,7 +192,7 @@ class PassengerList:
         floor.passengers.add_passenger_list(passenger_df)
         floor.log(f"{floor.name}: 1 new arrival; count is {floor.passengers.count_passengers()}")
 
-        self.register_arrivals(passenger)
+        await self.register_arrivals(passenger)
 
     def passenger_list_arrival(self, passengers):
         passenger_df = passengers.df
@@ -181,26 +232,118 @@ class PassengerList:
     def filter_by_direction(self, direction):
         "filters passengers to those on a floor"
         return PassengerList(self.df.loc[self.df.dir == direction, :])
+
+    def filter_by_lift_assigned(self, lift):
+        "filters passengers to those assigned to a lift"
+        def lift_filter_condition(assignment_condition, lift_name):
+            return lift_name == assignment_condition or lift_name in assignment_condition
+        filter_condition = self.df.loc[:,'lift'].apply(lambda x: lift_filter_condition(x, lift.name))
+        return PassengerList(self.df.loc[filter_condition, :])
+
+    def filter_by_lift_unassigned(self):
+        "filters passengers to those not assigned to a lift"
+        return PassengerList(self.df.loc[self.df.lift == 'Unassigned', :])
     
-    def assign_lift(self, lift):
+    def filter_by_lift_assigned_not_to_other_only(self, lift):
+        """as a signal of availability filters passengers 
+        to those assigned to this or not assigned to other lift"""
+        def lift_filter_condition(assignment_condition, lift_name):
+            return (
+                type(assignment_condition) is str and
+                (
+                    assignment_condition == lift_name or
+                    assignment_condition == 'Unassigned'
+                )
+            ) or (
+                type(assignment_condition) is list and
+                (
+                    lift_name in assignment_condition or
+                    len(assignment_condition) == 0
+                )
+            )
+        filter_condition = self.df.loc[:,'lift'].apply(lambda x: lift_filter_condition(x, lift.name))
+        return PassengerList(self.df.loc[filter_condition, :])
+    
+    def filter_dir_for_earliest_arrival(self, dir, n):
+        filtered_df = self.df.loc[self.df.dir == dir, :]
+        to_select = min(n, filtered_df.shape[0])
+        return filtered_df.sort_values('trip_start_time').head(to_select)
+    
+    def filter_by_earliest_arrival(self, n):
+        return PassengerList(self.df.sort_values('trip_start_time').head(n))
+
+    def filter_by_status_waiting(self):
+        "filters passengers to those waiting"
+        return PassengerList(self.df.loc[self.df.status == 'Waiting', :])
+    
+    @classmethod
+    def append_lift(cls, existing_assignment, lift_name):
+        if type(existing_assignment) is list:
+            if lift_name in existing_assignment:
+                return existing_assignment
+            return existing_assignment + [lift_name]
+        elif type(existing_assignment) is str:
+            if existing_assignment == 'Unassigned':
+                return lift_name
+            elif lift_name != existing_assignment:
+                return [existing_assignment] + [lift_name]
+            else:
+                return existing_assignment
+    
+    def assign_lift(self, lift, assign_multi=True):
         from base.Lift import Lift
 
         assert type(lift) is Lift
-        self.df.loc[:, 'lift'] = lift.name
+        if assign_multi:
+            self.df.loc[self.df.lift != 'Unassigned', 'lift'] = \
+                self.df.loc[self.df.lift != 'Unassigned', 'lift'] \
+                .apply(lambda x: PassengerList.append_lift(x, lift.name))
+            self.df.loc[self.df.lift == 'Unassigned', 'lift'] = lift.name
+        else:
+            self.df.loc[:, 'lift'] = lift.name
     
-    def assign_lift_for_floor(self, lift, floor):
+    def assign_lift_for_floor(self, lift, floor, assign_multi=True):
         from base.Lift import Lift
 
         assert type(lift) is Lift
         assert type(floor) is Floor
-        self.df.loc[self.df.source==floor.name, 'lift'] = lift.name
+        if assign_multi:
+            self.df.loc[self.df.source==floor.name, 'lift'] = \
+                self.df.loc[self.df.source==floor.name, 'lift'] \
+                .apply(lambda x: PassengerList.append_lift(x, lift.name))
+        else:
+            self.df.loc[self.df.source==floor.name, 'lift'] = lift.name
     
-    def assign_lift_for_selection(self, lift, passenger_list):
+    def assign_lift_for_selection(self, lift, passenger_list, assign_multi=True):
         from base.Lift import Lift
 
         assert type(lift) is Lift
         assert type(passenger_list) is PassengerList
-        self.df.loc[passenger_list.df.index, 'lift'] = lift.name
+        if assign_multi:
+            self.df.loc[passenger_list.df.index, 'lift'] = \
+                self.df.loc[passenger_list.df.index, 'lift'] \
+                .apply(lambda x: PassengerList.append_lift(x, lift.name))
+        else:
+            self.df.loc[passenger_list.df.index, 'lift'] = lift.name
+
+    def unassign_lift_from_selection(self, lift, passenger_list):
+        from base.Lift import Lift
+
+        assert type(lift) is Lift
+        assert type(passenger_list) is PassengerList
+        def unassign(lift_name, existing_assignment):
+            if type(existing_assignment) is str:
+                if existing_assignment == lift_name:
+                    return "Unassigned"
+            elif type(existing_assignment) is list:
+                if lift_name in existing_assignment:
+                    return [l for l in existing_assignment if l != lift_name]
+            return existing_assignment
+                
+        self.df.loc[passenger_list.df.index, 'lift'] = \
+            self.df.loc[passenger_list.df.index, 'lift'].apply(
+                lambda x: unassign(lift.name, x)
+            )
 
     def update_passenger_floor(self, floor):
         self.df.loc[:, 'current'] = floor.name
@@ -232,6 +375,7 @@ class PassengerList:
         assert ordering_type in df.columns
 
         df['trip'] = format_trip(df)
+        # TODO: floor height ordering to work differently for source, target and current
         df['order'] = df.apply(lambda x: floor_list.floor_height_order(x[ordering_type], x.dir), axis=1)
         
         print( 'All passengers',
@@ -274,4 +418,6 @@ class PassengerList:
             print(df.loc[:, print_cols])
 
 
-PASSENGERS = PassengerList(p_list_name='all passengers', lift_tracking=True)
+PASSENGERS = PassengerList(
+    p_list_name='all passengers', lift_managing=True, lift_tracking=True
+)

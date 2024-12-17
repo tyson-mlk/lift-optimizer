@@ -20,6 +20,12 @@ class LiftSpec:
                 self.overhead, self.max_v, dist
             )
 
+    def __str__(self):
+        if self.model_type == "accel":
+            return f"model: {self.model_type}, a: {self.a}, max_v: {self.max_v}"
+        elif self.model_type == "unif":
+            return f"model: {self.model_type}, max_v: {self.max_v}, overhead: {self.overhead}"
+
     @classmethod
     def accel_model_time(cls, a, max_v, dist: float) -> float:
         accel_dist = max_v ** 2 / a

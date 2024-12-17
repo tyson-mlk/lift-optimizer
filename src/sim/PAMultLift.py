@@ -28,9 +28,15 @@ for source in FLOOR_LIST.list_floors():
             dir = 'D'
         key = (source, target, dir)
         if (source == '000') | (target == '000'):
-            trip_arrival_rates[key] = 0.003
+            # trip_arrival_rates[key] = 0.00005 # sparse request
+            # trip_arrival_rates[key] = 0.003 # one lift busy
+            # trip_arrival_rates[key] = 0.006 # two lifts busy
+            trip_arrival_rates[key] = 0.012 # five lifts busy
         else:
-            trip_arrival_rates[key] = 0.0002
+            # trip_arrival_rates[key] = 0.00005 # sparse request
+            # trip_arrival_rates[key] = 0.0002 # one lift busy
+            # trip_arrival_rates[key] = 0.0004 # two lifts busy
+            trip_arrival_rates[key] = 0.001 # five lifts busy
 
 def increment_counter(counter_type):
     COUNTERS[counter_type] += 1
@@ -67,14 +73,28 @@ async def all_arrivals():
     await asyncio.gather(*jobs)
     
 async def lift_operation():
-    l1 = Lift('l1', '000', 'U')
+    l1 = Lift('L1', '000', 'U')
     PASSENGERS.register_lift(l1)
+    l2 = Lift('L2', '000', 'U')
+    PASSENGERS.register_lift(l2)
+    l3 = Lift('L3', '000', 'U')
+    PASSENGERS.register_lift(l3)
+    l4 = Lift('L4', '000', 'U')
+    PASSENGERS.register_lift(l4)
+    l5 = Lift('L5', '000', 'U')
+    PASSENGERS.register_lift(l5)
 
-    task = asyncio.create_task(l1.lift_baseline_operation())
-    await task
+    # need to let lifts take up only unassigned passengers
+    await asyncio.gather(
+        l1.lift_baseline_operation(),
+        l2.lift_baseline_operation(),
+        l3.lift_baseline_operation(),
+        l4.lift_baseline_operation(),
+        l5.lift_baseline_operation()
+    )
 
 async def main():
-    timeout = 500
+    timeout = 3600
     start_time = datetime.now()
     start_time.hour
     try:
@@ -83,6 +103,6 @@ async def main():
     except asyncio.TimeoutError:
         print('timeout: save passengers to file')
         time_start_str = f'{start_time.hour:02}_{start_time.minute:02}_{start_time.second:02}'
-        out_file = f'../data/PASimOneLift_{time_start_str}.csv'
+        out_file = f'../data/PAMultLift_{time_start_str}.csv'
         PASSENGERS.df.sort_values(['status', 'dir', 'source', 'trip_start_time']) \
             .to_csv(out_file)
