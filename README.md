@@ -15,6 +15,13 @@ Proof of Concept for simulating, visualizing and ultimately optimizing lifts ser
 The time for lifts to move is found in lift specification. Default acceleration model has a constant acceleration and maximum speed limit for a physics model serving different height of floors, without regard for carrying load.
 Time for lifts to off-board and on-board is 0.5 and 1.5 s per passenger respectively when lift has less or more than half of its capacity.
 
+## Sample Usage
+```
+python src/usage_travel.py
+python src/usage_lift_state.py
+python src/usage_simulation.py
+```
+
 ## Passenger States
 ![Passenger state](data/Passenger%20States.png "passenger_state")
 

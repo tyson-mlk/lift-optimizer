@@ -1,3 +1,10 @@
+"""
+Simulation of multiple lifts moving with baseline coordination setting
+In a tower of 20 floors, 5 lifts and 
+passengers arrival rates from a statistical Poisson process
+After running through 1 hour, passenger records are saved to file
+"""
+
 import asyncio
 from random import expovariate
 from datetime import datetime
