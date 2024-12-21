@@ -1,29 +1,51 @@
 # Lift Optimizer
-lift optimization dev
+Proof of Concept for simulating, visualizing and ultimately optimizing lifts serving passengers on floors
 
-## ER Diagram:
-![Data model](ER.png "ERD")
+## Objective:
+- Minimize passenger travel time taking lifts, this includes
+	1. time waiting for lifts
+	2. time boarding on lifts
+- Incur heavier penalty for passengers taking longer than a specified time
 
-## Lift State Transitions
-![Transition Diagram](StateDiagram.png "Lift State Transitions")
+## Constraints:
+- lifts onboard passengers, move, and offboard them at their destinations
+- lifts have a capacity limit
+- when not vacant, lifts move to serve passengers onboard, i.e. not allowed to stay idle or move in opposite direction
+
+The time for lifts to move is found in lift specification. Default acceleration model has a constant acceleration and maximum speed limit for a physics model serving different height of floors, without regard for carrying load.
+Time for lifts to off-board and on-board is 0.5 and 1.5 s per passenger respectively when lift has less or more than half of its capacity.
+
+## Passenger States
+![Passenger state](data/Passenger%20States.png "passenger_state")
+
+## ER Diagram
+![Data model](data/ER.png "ERD")
 
 ## Baseline model
-Baseline Model
-- total passenger time on lift is measured as total of time to onboard, time while lift is moving, time while lift is loading on other floors, and time to offboard
-- total time for lift movement follows an acceleration model, with dynamics having a fixed constant acceleration (a = 1ms-2) to a max speed (v = 4ms-1)
 
-Baseline Model passenger assignment to lifts for lift coordination
-- no lift movement when no passenger is in lift or assigned
+### Baseline Lift States
+![Lift state](data/Baseline%20Flow.png "Lift Baseline State Transitions")
+
+Baseline passenger assignment to lift is for:
+1. Lifts to not crowd-out immediate targets
+2. Marking passengers of immediate target floors so remaining lifts can calculate a u-turn
+
+The Baseline model
 - assigns passengers following the immediate nearest floor along the direction of lift, subject to lift capacity
-- passenger assignment with `assign_multi = True`, where the taking lift will be the first arriving lift
-- passengers are onboarded with `bypass_prev_assignment = True`, bypassing all existing assignments and onboarding priority is from *earliest arrival*
-- lifts are redirected from existing movement, if it has capacity and is able to fetch a passenger between current lift movement and lift target along direction of movement
-- redirection frees passengers of the previous target floor from previous assignment, and assigns passengers from the redirected floor
-- when a new passenger arrives, the nearest lift is searched (currently only on moving lifts), and if it has capacity, that passenger is assigned
+- passenger assignment with `assign_multi = True` (passengers can be assigned to multiple lifts); the taking lift will be the first arriving lift
+- `bypass_prev_assignment = True`: assignments can be bypassed; first arriving lift heading in same direction will take the passenger
+- passenger onboarding priority is from *earliest arrival*; first arriving passenger will take the lift
+- moving lifts can be redirected from existing target, if it has capacity and is able to reach new target along the same direction before exising target
+- lift redirection frees passengers from previous assignment
+- when a new passenger arrives, the nearest lift is searched to assign for the passenger according to existing remaining capacity
+- lift do not make any movement when no passenger is in lift or assigned to that lift while waiting
+
+Baseline model current drawbacks and potential improvements:
+- Unless there are boarding passengers, not more than one lift will target the same floor at same time. This can be non-optimal when the floor has more passengers than for one lift.
+- Lift assignment and movement does not consider potential new passenger requests in the future. It can be non-optimal for lift stationing and moving once passengers arrive.
+- Lifts do not coordinate to segregate targeted passengers, as they serve immediately passengers who arrive the earliest. This is non-optimal in having to serve more floors and take more stops.
 
 ## TODO:
 - add live visualizer for multi-floor and multi-lift with passenger counts
-
 - evaluate travel time
-
-- setup lift assignment and coordination module
+- modularize lift coordination
