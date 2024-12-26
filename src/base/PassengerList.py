@@ -1,7 +1,7 @@
 import pandas as pd
 from datetime import datetime
 from logging import INFO, DEBUG
-from asyncio import Queue
+from asyncio import Queue, Lock, sleep
 
 from utils.Logging import get_logger
 from base.Passenger import Passenger
@@ -52,6 +52,7 @@ class PassengerList:
             self.arrival_queue = Queue()
         if lift_managing:
             self.lift_msg_queue = Queue()
+            self.lift_msg_queue_lock = Lock()
             self.tracking_lifts = []
 
     def __del__(self):
@@ -97,21 +98,40 @@ class PassengerList:
             PassengerList.schema
         )
     
-    async def register_arrivals(self, passenger):
-        msg = passenger.source, passenger.target, passenger.dir
-        self.custom_log(f"arrival of {passenger.id}")
-        search_redirect_lift = self.lift_search_redirect_gen(passenger.source, passenger.dir)
-        self.custom_log(f"search order for {passenger.id} {self.lift_search_redirect(passenger.source, passenger.dir)}")
+    def get_passenger_by_id(self, passenger_id):
+        return self.df.loc[passenger_id,:]
+    
+    async def search_lifts_to_queue_passenger(self, passenger_id, source, target, dir):
+        msg = source, target, dir
+        search_redirect_lift = self.lift_search_redirect_gen(source, dir)
         for next_lift in iter(search_redirect_lift):
-            print(f'{next_lift.name} from {next_lift.floor} evaluating for', msg)
+            next_lift.log(f'{next_lift.name} from {next_lift.floor} evaluating for {msg}')
             next_lift.passengers.arrival_queue.put_nowait(msg)
-            self.custom_log(f"evaluating {passenger.id} for {next_lift.name}")
+            self.log(f"evaluating {passenger_id} for {next_lift.name}")
             assigned = await self.lift_msg_queue.get()
-            print(f"evaluation {passenger.id} for {next_lift.name} is {assigned}")
-            self.custom_log(f"evaluation {passenger.id} for {next_lift.name} is {assigned}")
+            self.log(f"evaluation {passenger_id} for {next_lift.name} is {assigned}")
+            self.custom_log(f"evaluation {passenger_id} for {next_lift.name} is {assigned}")
             if assigned:
                 break
-        self.custom_log(f"done register arrivals for passenger {passenger.id}")
+
+    async def search_stationary_lifts_to_reassign(self, source, dir, passenger_ids):
+        """assigns one passenger per stationary lift"""
+        search_reassign_lift = self.lift_search_reassign_stationary_gen(source)
+        if not hasattr(search_reassign_lift, '__iter__'):
+            self.log('invalid type for search_reassign_lift')
+            return
+        for passenger_id in passenger_ids:
+            msg = self.df.loc[passenger_id, ['source', 'target', 'dir']].values
+            assigned = False
+            while not assigned:
+                next_lift = next(search_reassign_lift, None)
+                if next_lift is None:
+                    return
+                next_lift.log(f'{next_lift.name} from {next_lift.floor} evaluating for {msg}')
+                next_lift.passengers.arrival_queue.put_nowait(msg)
+                self.log(f"evaluating {passenger_id} for {next_lift.name}")
+                assigned = await self.lift_msg_queue.get()
+                self.log(f"evaluation {passenger_id} for {next_lift.name} is {assigned}")
 
     def register_lift(self, lift):
         assert hasattr(self, 'tracking_lifts')
@@ -124,27 +144,49 @@ class PassengerList:
         from base.FloorList import FLOOR_LIST
         target_height = FLOOR_LIST.get_floor(arrival_source).height
         for lift in PASSENGERS.tracking_lifts:
-            # lift_order[lift] = FLOOR_LIST.height_queue_order(
-            #     target_height, arrival_dir, lift.get_stopping_height(time), lift.dir
-            # )
-            time_to_reach = lift.get_reaching_time(time, target_height)
-            if (lift.dir == arrival_dir or lift.dir == 'S') and time_to_reach is not None:
-                lift_order[lift] = time_to_reach
-        for sorted_lift in sorted(lift_order.items(), key=lambda x: x[1]):
+            if (lift.dir == arrival_dir or lift.dir == 'S'):
+                time_to_reach = lift.get_reaching_time(time, target_height)
+                self.custom_log(f'lift_search_redirect_gen {lift.name} time_to_reach {time_to_reach}')
+                if time_to_reach is not None:
+                    lift_order[lift] = time_to_reach
+        search_order = sorted(lift_order.items(), key=lambda x: x[1])
+        self.custom_log(f'search order {search_order}')
+        for sorted_lift in search_order:
             yield sorted_lift[0]
 
-    def lift_search_redirect(self, arrival_source, arrival_dir):
-        "for debugging of lift search order"
+    def lift_search_reassign_stationary_gen(self, arrival_source):
         time = datetime.now()
         lift_order = {}
 
         from base.FloorList import FLOOR_LIST
         target_height = FLOOR_LIST.get_floor(arrival_source).height
         for lift in PASSENGERS.tracking_lifts:
+            if lift.dir != 'S':
+                continue
             time_to_reach = lift.get_reaching_time(time, target_height)
-            if lift.dir == arrival_dir and time_to_reach is not None:
+            if time_to_reach is not None:
                 lift_order[lift] = time_to_reach
-        return [(lift_item[0].name, lift_item[1]) for lift_item in sorted(lift_order.items(), key=lambda x: x[1])]
+        search_order = sorted(lift_order.items(), key=lambda x: x[1])
+        self.custom_log(f'search order {[[item[0].name, item[1]] for item in search_order]}')
+        for sorted_lift in search_order:
+            yield sorted_lift[0]
+
+    # def lift_search_redirect(self, arrival_source, arrival_dir):
+    #     "for debugging of lift search order"
+    #     time = datetime.now()
+    #     lift_order = {}
+
+    #     from base.FloorList import FLOOR_LIST
+    #     target_height = FLOOR_LIST.get_floor(arrival_source).height
+    #     for lift in PASSENGERS.tracking_lifts:
+    #         time_to_reach = lift.get_reaching_time(time, target_height)
+    #         if (lift.dir == arrival_dir or lift.dir == 'S') and time_to_reach is not None:
+    #             # lift_order[lift] = {'ns': lift.dir != 'S', 'time':time_to_reach}
+    #             lift_order[lift] = time_to_reach
+    #     # return [(lift_item[0].name, lift_item[1]) for lift_item in
+    #     #         sorted(lift_order.items(), key=lambda x: (x[1]['ns'], x[1]['time']))]
+    #     return [(lift_item[0].name, lift_item[1]) for lift_item in
+    #             sorted(lift_order.items(), key=lambda x: x[1])]
     
     def count_passengers(self) -> int:
         return self.df.shape[0]
@@ -166,6 +208,7 @@ class PassengerList:
 
     def board(self, passengers):
         self.df.loc[passengers.df.index, 'status'] = 'Onboard'
+        self.log(f'board: passengers {passengers.df.index} boarding from {self.df.index}')
         self.update_boarding_time(passengers)
 
     def update_boarding_time(self, passengers):
@@ -192,7 +235,20 @@ class PassengerList:
         floor.passengers.add_passenger_list(passenger_df)
         floor.log(f"{floor.name}: 1 new arrival; count is {floor.passengers.count_passengers()}")
 
-        await self.register_arrivals(passenger)
+        self.log(f'arrival search, attempt to acquire, is locked {self.lift_msg_queue_lock.locked()}')
+        async with self.lift_msg_queue_lock:
+            self.log(f'arrival search, acquired')
+            self.custom_log(f"queuing for arrival of {passenger.id}")
+            await self.search_lifts_to_queue_passenger(passenger.id, passenger.source,
+                                                       passenger.target, passenger.dir)
+        self.log('arrival search, released')
+
+    async def reassign_unassigned(self, arrival_source, arrival_dir, passenger_ids):
+        self.log(f'reassignment search, attempt to acquire, is locked {self.lift_msg_queue_lock.locked()}')
+        async with self.lift_msg_queue_lock:
+            self.log('reassignment search, acquired')
+            await self.search_stationary_lifts_to_reassign(arrival_source, arrival_dir, passenger_ids)
+        self.log('reassignment search, released')
 
     def passenger_list_arrival(self, passengers):
         passenger_df = passengers.df
@@ -375,7 +431,6 @@ class PassengerList:
         assert ordering_type in df.columns
 
         df['trip'] = format_trip(df)
-        # TODO: floor height ordering to work differently for source, target and current
         df['order'] = df.apply(lambda x: floor_list.floor_height_order(x[ordering_type], x.dir), axis=1)
         
         print( 'All passengers',

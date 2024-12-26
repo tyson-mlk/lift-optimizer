@@ -77,7 +77,13 @@ async def all_arrivals():
     jobs = [cont_exp_gen(trip=k, rate=v) for k,v in trip_arrival_rates.items()]
     start_time = datetime.now()
     print(f'all start: {start_time}')
-    await asyncio.gather(*jobs)
+    arrival_timeout = 1680
+    try:
+        async with asyncio.timeout(arrival_timeout):
+            await asyncio.gather(*jobs)
+    except asyncio.TimeoutError:
+        print('all passengers arrived')
+        PASSENGERS.log('all passengers arrived')
     
 async def lift_operation():
     l1 = Lift('L1', '000', 'U')
@@ -101,7 +107,7 @@ async def lift_operation():
     )
 
 async def main():
-    timeout = 3600
+    timeout = 1800
     start_time = datetime.now()
     start_time.hour
     try:
