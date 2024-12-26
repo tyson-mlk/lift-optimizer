@@ -338,6 +338,17 @@ class PassengerList:
             if lift_name in existing_assignment:
                 return existing_assignment
             return existing_assignment + [lift_name]
+        elif (
+            type(existing_assignment) is str and
+            len(existing_assignment) > 0 and
+            existing_assignment[0] == "[" and
+            existing_assignment[-1] == "]"
+        ):
+            existing_assignment = existing_assignment[1:-1].split(', ')
+            existing_assignment = list(map(lambda x: x.replace("'", ""), existing_assignment))
+            if lift_name in existing_assignment:
+                return existing_assignment
+            return existing_assignment + [lift_name]
         elif type(existing_assignment) is str:
             if existing_assignment == 'Unassigned':
                 return lift_name
