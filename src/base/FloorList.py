@@ -13,6 +13,8 @@ class FloorList:
         floor.init_logger()
 
     def get_floor(self, floorname):
+        if floorname is None:
+            return None
         if floorname not in self.dict:
             raise ValueError('Invalid floor name')
         return self.dict[floorname]
