@@ -1,17 +1,23 @@
 import asyncio
+import pandas as pd
 from datetime import datetime
 from base.Passenger import Passenger
-from base.PassengerList import PASSENGERS
+from base.PassengerList import PassengerList, PASSENGERS
 from base.Lift import Lift
 
-async def passenger_arrival(source_floor, target_floor, start_time):
-    new_passenger = Passenger(source_floor, target_floor, start_time)
-    await PASSENGERS.passenger_arrival(new_passenger)
+def passenger_arrival(source_floor, target_floor, direction, num, start_time):
+    passenger_df = pd.concat(
+        [PassengerList.passenger_to_df(
+            Passenger(source_floor, target_floor, start_time)
+        ) for _ in range(num)], 
+        axis=0
+    )
+    passengers = PassengerList(passenger_df)
+    PASSENGERS.passenger_list_arrival(passengers)
 
 async def passenger_arrival_event():
-    await passenger_arrival('000', '001', datetime.now())
-    await passenger_arrival('000', '001', datetime.now())
-    await passenger_arrival('000', '001', datetime.now())
+    await asyncio.sleep(0)
+    passenger_arrival('000', '001', 'U', 3, datetime.now())
     await asyncio.sleep(0)
 
 # simulates run of multiple continuous exponential processes in fixed time
@@ -25,6 +31,7 @@ async def lift_operation():
     l1 = Lift('L1', '000', 'U')
     l1.capacity = 2
     PASSENGERS.register_lift(l1)
+    print('lift start operation')
 
     # need to let lifts take up only unassigned passengers
     await asyncio.gather(
@@ -34,6 +41,7 @@ async def lift_operation():
 async def track():
     await asyncio.sleep(0.1)
     l1 = PASSENGERS.tracking_lifts[0]
+    print('start tracking')
     # test for initial state for passenger count
     assert PASSENGERS.count_passengers() == 3
     await asyncio.sleep(2)

@@ -35,15 +35,15 @@ for source in FLOOR_LIST.list_floors():
             dir = 'D'
         key = (source, target, dir)
         if (source == '000') | (target == '000'):
-            # trip_arrival_rates[key] = 0.00005 # sparse request
+            trip_arrival_rates[key] = 0.00005 # sparse request
             # trip_arrival_rates[key] = 0.003 # one lift busy
             # trip_arrival_rates[key] = 0.006 # two lifts busy
-            trip_arrival_rates[key] = 0.012 # five lifts busy
+            # trip_arrival_rates[key] = 0.012 # five lifts busy
         else:
-            # trip_arrival_rates[key] = 0.00005 # sparse request
+            trip_arrival_rates[key] = 0.00005 # sparse request
             # trip_arrival_rates[key] = 0.0002 # one lift busy
             # trip_arrival_rates[key] = 0.0004 # two lifts busy
-            trip_arrival_rates[key] = 0.001 # five lifts busy
+            # trip_arrival_rates[key] = 0.001 # five lifts busy
 
 def increment_counter(counter_type):
     COUNTERS[counter_type] += 1
@@ -75,9 +75,16 @@ async def cont_exp_gen(trip, rate=1.0):
 # simulates run of multiple continuous exponential processes in fixed time
 async def all_arrivals():
     jobs = [cont_exp_gen(trip=k, rate=v) for k,v in trip_arrival_rates.items()]
+    jobs += [PASSENGERS.reassignment_listener()]
     start_time = datetime.now()
     print(f'all start: {start_time}')
-    await asyncio.gather(*jobs)
+    arrival_timeout = 1680
+    try:
+        async with asyncio.timeout(arrival_timeout):
+            await asyncio.gather(*jobs)
+    except asyncio.TimeoutError:
+        print('PASSENGERS ARRIVAL COMPLETE')
+        PASSENGERS.log('PASSENGERS ARRIVAL COMPLETE')
     
 async def lift_operation():
     l1 = Lift('L1', '000', 'U')
@@ -90,6 +97,12 @@ async def lift_operation():
     PASSENGERS.register_lift(l4)
     l5 = Lift('L5', '000', 'U')
     PASSENGERS.register_lift(l5)
+    # l6 = Lift('L6', '000', 'U')
+    # PASSENGERS.register_lift(l6)
+    # l7 = Lift('L7', '000', 'U')
+    # PASSENGERS.register_lift(l7)
+    # l8 = Lift('L8', '000', 'U')
+    # PASSENGERS.register_lift(l8)
 
     # need to let lifts take up only unassigned passengers
     await asyncio.gather(
@@ -97,11 +110,14 @@ async def lift_operation():
         l2.lift_baseline_operation(),
         l3.lift_baseline_operation(),
         l4.lift_baseline_operation(),
-        l5.lift_baseline_operation()
+        l5.lift_baseline_operation(),
+        # l6.lift_baseline_operation(),
+        # l7.lift_baseline_operation(),
+        # l8.lift_baseline_operation()
     )
 
 async def main():
-    timeout = 3600
+    timeout = 1800
     start_time = datetime.now()
     start_time.hour
     try:

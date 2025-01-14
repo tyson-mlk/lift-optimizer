@@ -45,6 +45,7 @@ The Baseline model
 - moving lifts can be redirected from existing target, if it has capacity and is able to reach new target along the same direction before exising target
 - lift redirection frees passengers from previous assignment
 - when a new passenger arrives, the nearest lift is searched to assign for the passenger according to existing remaining capacity
+- when a redirection takes place, previous assignment passengers are try-searched for stationary lifts to assign them
 - lift do not make any movement when no passenger is in lift or assigned to that lift while waiting
 
 Baseline model current drawbacks and potential improvements:
