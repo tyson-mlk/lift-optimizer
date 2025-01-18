@@ -12,6 +12,7 @@ from base.FloorList import FLOOR_LIST
 from base.Passenger import Passenger
 from base.PassengerList import PASSENGERS
 from base.Lift import Lift
+from metrics.Summary import floor_request_snapshot, density_summary, lift_summary
 
 TRIPS = [(
     source, target,
@@ -35,15 +36,15 @@ for source in FLOOR_LIST.list_floors():
             dir = 'D'
         key = (source, target, dir)
         if (source == '000') | (target == '000'):
-            trip_arrival_rates[key] = 0.00005 # sparse request
+            # trip_arrival_rates[key] = 0.00005 # sparse request
             # trip_arrival_rates[key] = 0.003 # one lift busy
             # trip_arrival_rates[key] = 0.006 # two lifts busy
-            # trip_arrival_rates[key] = 0.012 # five lifts busy
+            trip_arrival_rates[key] = 0.012 # five lifts busy
         else:
-            trip_arrival_rates[key] = 0.00005 # sparse request
+            # trip_arrival_rates[key] = 0.00005 # sparse request
             # trip_arrival_rates[key] = 0.0002 # one lift busy
             # trip_arrival_rates[key] = 0.0004 # two lifts busy
-            # trip_arrival_rates[key] = 0.001 # five lifts busy
+            trip_arrival_rates[key] = 0.001 # five lifts busy
 
 def increment_counter(counter_type):
     COUNTERS[counter_type] += 1
@@ -87,21 +88,21 @@ async def all_arrivals():
         PASSENGERS.log('PASSENGERS ARRIVAL COMPLETE')
     
 async def lift_operation():
-    l1 = Lift('L1', '000', 'U')
+    l1 = Lift('Lift A', 'G', 'U')
     PASSENGERS.register_lift(l1)
-    l2 = Lift('L2', '000', 'U')
+    l2 = Lift('Lift B', 'G', 'U')
     PASSENGERS.register_lift(l2)
-    l3 = Lift('L3', '000', 'U')
+    l3 = Lift('Lift C', 'G', 'U')
     PASSENGERS.register_lift(l3)
-    l4 = Lift('L4', '000', 'U')
+    l4 = Lift('Lift D', 'G', 'U')
     PASSENGERS.register_lift(l4)
-    l5 = Lift('L5', '000', 'U')
+    l5 = Lift('Lift E', 'G', 'U')
     PASSENGERS.register_lift(l5)
-    # l6 = Lift('L6', '000', 'U')
+    # l6 = Lift('L6', 'G', 'U')
     # PASSENGERS.register_lift(l6)
-    # l7 = Lift('L7', '000', 'U')
+    # l7 = Lift('L7', 'G', 'U')
     # PASSENGERS.register_lift(l7)
-    # l8 = Lift('L8', '000', 'U')
+    # l8 = Lift('L8', 'G', 'U')
     # PASSENGERS.register_lift(l8)
 
     # need to let lifts take up only unassigned passengers
@@ -116,13 +117,31 @@ async def lift_operation():
         # l8.lift_baseline_operation()
     )
 
+# for developing visuals
+async def visualize_operation():
+    await asyncio.sleep(120)
+    print('SUMMARY start')
+    
+    lift_summary_df = lift_summary()
+    floor_summary_df = floor_request_snapshot(FLOOR_LIST)
+    density_summary_df = density_summary(floor_summary_df, PASSENGERS.df)
+    floor_out_file = '../data/floor_summary.csv'
+    density_out_file = '../data/density_summary.csv'
+    lift_out_file = '../data/lift_summary.csv'
+    print('SUMMARY output')
+    floor_summary_df.to_csv(floor_out_file, index=None)
+    density_summary_df.to_csv(density_out_file)
+    lift_summary_df.to_csv(lift_out_file, index=None)
+    print('SUMMARY done')
+    raise asyncio.TimeoutError
+
 async def main():
     timeout = 1800
     start_time = datetime.now()
     start_time.hour
     try:
         async with asyncio.timeout(timeout):
-            await asyncio.gather(all_arrivals(), lift_operation())
+            await asyncio.gather(all_arrivals(), lift_operation(), visualize_operation())
     except asyncio.TimeoutError:
         print('timeout: save passengers to file')
         time_start_str = f'{start_time.hour:02}_{start_time.minute:02}_{start_time.second:02}'

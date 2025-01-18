@@ -395,6 +395,7 @@ class Lift:
             self.dir = 'U'
         elif floor.height < self.height:
             self.dir = 'D'
+        self.next_height = floor.height
         self.log(f"{self.name}: Start move from {current_floor.name} height {current_floor.height} at dir {self.dir}")
 
         time_since_latest_move = datetime.now()
@@ -455,6 +456,7 @@ class Lift:
                             'target_floor': floor.name,
                             'time_of_redirect': time_since_latest_move
                         }
+                        self.next_height = floor.height
                         self.log(f'{self.name} send to passengers lift_msg_queue {redirect} from move')
                         PASSENGERS.lift_msg_queue.put_nowait(redirect)
                         triggered = False

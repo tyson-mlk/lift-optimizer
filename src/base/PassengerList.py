@@ -452,6 +452,14 @@ class PassengerList:
         "scan for all passenger source floors"
         return self.df.loc[:,['source', 'dir']].drop_duplicates()
     
+    def boarded_lift_info(self) -> pd.DataFrame:
+        def get_boarded_lift(status, lift):
+            if status == 'Waiting':
+                return 'Waiting'
+            return lift
+        return self.df.loc[self.df.status != 'Arrived', :] \
+            .apply(lambda df: get_boarded_lift(df.status, df.lift), axis=1)
+    
     def update_passenger_metrics(self, print_passenger_metrics,
                                  floor_list, ordering_type='source'):
         from metrics.TimeMetrics import calculate_all_metrics
