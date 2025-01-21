@@ -1,4 +1,5 @@
 import asyncio
+import pytest
 import pandas as pd
 from datetime import datetime
 from base.Passenger import Passenger
@@ -15,18 +16,21 @@ def passenger_arrival(source_floor, target_floor, direction, num, start_time):
     passengers = PassengerList(passenger_df)
     PASSENGERS.passenger_list_arrival(passengers)
 
+@pytest.mark.asyncio
 async def passenger_arrival_event():
     await asyncio.sleep(0)
     passenger_arrival('000', '001', 'U', 3, datetime.now())
     await asyncio.sleep(0)
 
 # simulates run of multiple continuous exponential processes in fixed time
+@pytest.mark.asyncio
 async def all_arrivals():
     jobs = [passenger_arrival_event()]
     start_time = datetime.now()
     print(f'test start: {start_time}')
     await asyncio.gather(*jobs)
-    
+
+@pytest.mark.asyncio
 async def lift_operation():
     l1 = Lift('L1', '000', 'U')
     l1.capacity = 2
@@ -38,6 +42,7 @@ async def lift_operation():
         l1.lift_baseline_operation()
     )
 
+@pytest.mark.asyncio
 async def track():
     await asyncio.sleep(0.1)
     l1 = PASSENGERS.tracking_lifts[0]
@@ -50,6 +55,7 @@ async def track():
     assert PASSENGERS.filter_by_lift_assigned(l1).count_passengers() == 2
     assert l1.passengers.count_passengers() == 2
 
+@pytest.mark.asyncio
 async def main():
     timeout = 10
     start_time = datetime.now()

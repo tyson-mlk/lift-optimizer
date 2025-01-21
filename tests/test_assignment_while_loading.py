@@ -1,18 +1,22 @@
 import asyncio
+import pytest
 from datetime import datetime
 from base.Passenger import Passenger
 from base.PassengerList import PASSENGERS
 from base.Lift import Lift
 
+@pytest.mark.asyncio
 async def passenger_arrival(source_floor, target_floor, start_time):
     new_passenger = Passenger(source_floor, target_floor, start_time)
     await PASSENGERS.passenger_arrival(new_passenger)
 
+@pytest.mark.asyncio
 async def job_start():
     await passenger_arrival('000', '005', datetime.now())
     print('job_start passenger arrived', datetime.now())
     await asyncio.sleep(0)
 
+@pytest.mark.asyncio
 async def job_reload():
     await asyncio.sleep(0.2)
     await passenger_arrival('002', '003', datetime.now())
@@ -20,12 +24,14 @@ async def job_reload():
     await asyncio.sleep(0)
 
 # simulates run of multiple continuous exponential processes in fixed time
+@pytest.mark.asyncio
 async def all_arrivals():
     jobs = [job_start(), job_reload()]
     start_time = datetime.now()
     print(f'all start: {start_time}')
     await asyncio.gather(*jobs)
-    
+
+@pytest.mark.asyncio
 async def lift_operation():
     l1 = Lift('L1', '000', 'U')
     PASSENGERS.register_lift(l1)
@@ -35,6 +41,7 @@ async def lift_operation():
         l1.lift_baseline_operation()
     )
 
+@pytest.mark.asyncio
 async def track():
     await asyncio.sleep(0)
     # first passenger arrived
@@ -52,6 +59,7 @@ async def track():
     # lift arrived to floor 002 at 6.5 s
     assert l1.floor == '002'
 
+@pytest.mark.asyncio
 async def main():
     timeout = 7
     start_time = datetime.now()
