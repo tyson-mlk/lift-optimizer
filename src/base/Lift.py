@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 from logging import INFO, DEBUG
 
-from utils.Logging import get_logger
+from utils.Logging import get_logger, print_st
 from base.Floor import Floor
 from base.PassengerList import PassengerList, PASSENGERS
 from base.FloorList import FLOOR_LIST, MAX_FLOOR, MIN_FLOOR
@@ -44,6 +44,7 @@ class Lift:
         self.log = lambda msg: logger.info(msg)
         self.detail_log = lambda msg: detail_logger.debug(msg)
         self.log(f"{self.name}: init")
+        print_st(f"{self.name}: init")
 
     def __del__(self):
         self.log(f"{self.name}: start destructing")
@@ -54,6 +55,7 @@ class Lift:
             msg = self.reassignment_queue.get_nowait()
             self.log(f"{self.name}: flushing reassignment_queue item {msg}")
         self.log(f"{self.name}: destruction complete")
+        print_st(f"{self.name}: decommissioned")
 
     def calculate_passenger_count(self) -> None:
         self.passenger_count = self.passengers.count_passengers()
@@ -241,6 +243,7 @@ class Lift:
             self.detail_log(f'{self.name}: onboarding {num_to_onboard} passengers takes {time_to_onboard} s')
             await asyncio.sleep(time_to_onboard)
         self.log(f"{self.name}: Onboarding {num_to_onboard} passengers at floor {floor.name}")
+        print_st(f"{self.name}: {num_to_onboard} passengers boarded at {floor.name}")
 
     async def onboard_random_available(self, bypass_prev_assignment=True):
         "onboards passengers on the same floor by random if capacity is insufficient"
@@ -282,6 +285,7 @@ class Lift:
             self.detail_log(f'{self.name}: onboarding {num_to_onboard} passengers takes {time_to_onboard} s')
             await asyncio.sleep(time_to_onboard)
         self.log(f"{self.name}: Onboarding {num_to_onboard} passengers at floor {floor.name}")
+        print_st(f"{self.name}: {num_to_onboard} passengers boarded at {floor.name}")
 
     async def onboard_earliest_arrival(self, bypass_prev_assignment=True):
         "onboards passengers on the same floor by earliest assignment if capacity is insufficient"
@@ -325,6 +329,7 @@ class Lift:
             self.detail_log(f'{self.name}: onboarding {num_to_onboard} passengers takes {time_to_board} s')
         await self.assign_passengers_while_boarding(time_to_board)
         self.log(f"{self.name}: Onboarding {num_to_onboard} passengers at floor {floor.name}")
+        print_st(f"{self.name}: {num_to_onboard} passengers boarded at {floor.name}")
 
     def precalc_num_to_offboard(self, offboarding_mode):
         if offboarding_mode == 'all':
@@ -353,6 +358,7 @@ class Lift:
         self.passengers.remove_all_passengers()
         self.calculate_passenger_count()
         self.log(f"{self.name}: Updated passenger count {self.passenger_count}")
+        print_st(f"{self.name}: {num_to_offboard} passengers offboarded")
 
     async def offboard_arrived(self):
         current_floor = FLOOR_LIST.get_floor(self.floor)
@@ -373,6 +379,7 @@ class Lift:
         self.calculate_passenger_count()
         PASSENGERS.update_arrival(to_offboard)
         self.log(f"{self.name}: Updated passenger count {self.passenger_count}")
+        print_st(f"{self.name}: {num_to_offboard} passengers offboarded at {current_floor.name}")
 
     def precalc_loading_time(self, offboarding_mode, onboarding_mode):
         num_to_offboard = self.precalc_num_to_offboard(offboarding_mode=offboarding_mode)
@@ -428,6 +435,7 @@ class Lift:
                         prev_floor = floor
                         floor = FLOOR_LIST.get_floor(new_source)
                         self.update_next_dir(floor.name)
+                        print_st(f'{self.name}: redirecting to {floor.name}')
                     self.log(f'{self.name} redirect is {redirect}')
                     if redirect:
                         # release prev assignment (operation sequence is for async not distributed)
@@ -488,7 +496,7 @@ class Lift:
                 PASSENGERS.lift_msg_queue.put_nowait(False)
                 self.log('lift_msg_queue to release arrival queue')
             await asyncio.sleep(0)
-            print(f"{self.name}: reached {floor.name}")
+            print_st(f"{self.name}: reached {floor.name}")
             self.log(f"{self.name}: reached {floor.name} at height {floor.height}")
             self.dir = self.next_dir
             self.log(f"{self.name}: latest dir {self.dir}")
@@ -848,11 +856,12 @@ class Lift:
         baseline operation
         """
         self.log(f'{self.name} start baseline operation')
+        print_st(f'{self.name} start baseline operation')
         await asyncio.sleep(0)
         next_target = self.next_baseline_target()
         self.update_next_dir(next_target)
         if next_target is not None:
-            print(f'{self.name} lift new target {next_target} next direction {self.next_dir}')
+            print_st(f'{self.name} lift new target {next_target} next direction {self.next_dir}')
             self.log(f'{self.name} lift new target {next_target} next direction {self.next_dir}')
         self.assign_passengers(next_target, assign_multi=True)
         # print('debug passenger assignment')
@@ -860,11 +869,10 @@ class Lift:
         while True:
             if next_target is not None:
                 # baseline allows multi assignment after floor is chosen
-                print(f'{self.name} lift moving to target {next_target}')
+                print_st(f'{self.name} lift moving to target {next_target}')
                 next_floor = FLOOR_LIST.get_floor(next_target)
                 await self.move(next_floor)
-                print(f'{self.name} lift moved to target {self.floor} facing {self.dir}')
-                # self.debug_print_state()
+                print_st(f'{self.name} lift moved to target {self.floor} facing {self.dir}')
                 await self.loading()
                 for lift in PASSENGERS.tracking_lifts:                
                     print(f'{lift.name} facing {lift.dir} after loading at {lift.floor}, lift passengers:',
@@ -874,13 +882,14 @@ class Lift:
                 next_target = self.next_baseline_target()
                 self.log(f'{self.name} lift new target {next_target}')
                 self.update_next_dir(next_target)        
-                print(f'{self.name} lift new target {next_target} next direction {self.next_dir}')
+                print_st(f'{self.name} lift new target {next_target} next direction {self.next_dir}')
                 self.log(f'{self.name} lift next direction {self.next_dir}')
                 self.assign_passengers(next_target, assign_multi=True)
                 # print('debug passenger assignment')
                 # PASSENGERS.pprint_passenger_status(FLOOR_LIST, ordering_type='source')
             else:
                 self.log(f"{self.name} setting stationed")
+                print_st(f"{self.name} setting stationed")
                 self.set_stationed()
                 await asyncio.sleep(0)
                 # to catch passenger arrivals instead of always running
@@ -901,7 +910,7 @@ class Lift:
                 next_target = self.next_baseline_target()
                 self.log(f'{self.name} lift new target {next_target}')
                 self.update_next_dir(next_target)
-                print(f'{self.name} lift new target {next_target} next direction {self.next_dir}')
+                print_st(f'{self.name} lift new target {next_target} next direction {self.next_dir}')
                 self.log(f'{self.name} lift next direction {self.next_dir}')
                 self.assign_passengers(next_target, assign_multi=True)
                 
@@ -950,10 +959,6 @@ class Lift:
             print(df.loc[:, print_cols])
         else:
             print('lift empty')
-
-    def debug_print_state(self):
-        print(f"{self.name} at floor {self.floor} with passengers: {', '.join(self.passengers.df.index.values)} "
-              f"direction {self.dir} next dir {self.next_dir}")
 
     def print_overall_stats(self):
         print('overall stats', PASSENGERS.df.groupby(['status', 'lift']).size().sort_index(level='status'))

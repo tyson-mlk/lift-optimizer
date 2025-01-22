@@ -3,7 +3,7 @@ from datetime import datetime
 from logging import INFO, DEBUG
 import asyncio
 
-from utils.Logging import get_logger
+from utils.Logging import get_logger, print_st
 from base.Passenger import Passenger
 from base.Floor import Floor
 
@@ -55,6 +55,8 @@ class PassengerList:
             self.reassignment_rsp_queue = asyncio.Queue()
             self.arrival_lock = asyncio.Lock()
             self.tracking_lifts = []
+        # temp for dev of print stream
+        self.print_queue = asyncio.Queue()
 
     def __del__(self):
         self.log(f"{self.name}: start destructing")
@@ -245,6 +247,7 @@ class PassengerList:
         floor = FLOOR_LIST.get_floor(passenger.source)
         floor.passengers.add_passenger_list(passenger_df)
         floor.log(f"{floor.name}: 1 new arrival; count is {floor.passengers.count_passengers()}")
+        print_st(f"New passenger arrived at {floor.name}")
 
         # if not all([i in self.df.index for i in range(1,passenger.id+1)]):
         #     print(list(range(1,passenger.id+1)), self.df.index)
@@ -293,6 +296,9 @@ class PassengerList:
             floor.log(
                 f"{floor.name}: {(passengers.df.source == floor_name).sum()} new arrival;"
                 f" count is {floor.passengers.count_passengers()}"
+            )
+            print_st(
+                f"{(passengers.df.source == floor_name).sum()} new passenger arrived at {floor.name}"
             )
 
     def complement_passenger_list(self, passenger_list):

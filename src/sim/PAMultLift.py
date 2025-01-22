@@ -8,11 +8,14 @@ After running through 1 hour, passenger records are saved to file
 import asyncio
 from random import expovariate
 from datetime import datetime
+import streamlit as st
+
 from base.FloorList import FLOOR_LIST
 from base.Passenger import Passenger
 from base.PassengerList import PASSENGERS
 from base.Lift import Lift
 from metrics.Summary import floor_request_snapshot, density_summary, lift_summary
+from utils.Logging import print_st
 
 TRIPS = [(
     source, target,
@@ -70,7 +73,7 @@ async def cont_exp_gen(trip, rate=1.0):
             # print('passenger arrived from', trip[0], 'moving', trip[2], 'to', trip[1])
             await asyncio.sleep(0)
     except MemoryError:
-        print('memory error')
+        print_st('memory error')
         return None
 
 # simulates run of multiple continuous exponential processes in fixed time
@@ -78,13 +81,13 @@ async def all_arrivals():
     jobs = [cont_exp_gen(trip=k, rate=v) for k,v in trip_arrival_rates.items()]
     jobs += [PASSENGERS.reassignment_listener()]
     start_time = datetime.now()
-    print(f'all start: {start_time}')
+    print_st(f'all start: {start_time}')
     arrival_timeout = 1680
     try:
         async with asyncio.timeout(arrival_timeout):
             await asyncio.gather(*jobs)
     except asyncio.TimeoutError:
-        print('PASSENGERS ARRIVAL COMPLETE')
+        print_st('PASSENGERS ARRIVAL COMPLETE')
         PASSENGERS.log('PASSENGERS ARRIVAL COMPLETE')
     
 async def lift_operation():
@@ -120,7 +123,7 @@ async def lift_operation():
 # for developing visuals
 async def visualize_operation():
     await asyncio.sleep(120)
-    print('SUMMARY start')
+    print_st('SUMMARY start')
     
     lift_summary_df = lift_summary()
     floor_summary_df = floor_request_snapshot(FLOOR_LIST)
@@ -128,12 +131,23 @@ async def visualize_operation():
     floor_out_file = '../data/floor_summary.csv'
     density_out_file = '../data/density_summary.csv'
     lift_out_file = '../data/lift_summary.csv'
-    print('SUMMARY output')
+    print_st('SUMMARY output')
     floor_summary_df.to_csv(floor_out_file, index=None)
     density_summary_df.to_csv(density_out_file)
     lift_summary_df.to_csv(lift_out_file, index=None)
-    print('SUMMARY done')
+    print_st('SUMMARY done')
     raise asyncio.TimeoutError
+
+async def print_operation():
+    import sys
+
+    try:
+        while True:
+            msg = await PASSENGERS.print_queue.get()
+            st.write_stream(msg)
+    except Exception:
+        exception_type, value, traceback = sys.exc_info()
+        print_st(f'print_operation error info {exception_type, value, traceback}')
 
 async def main():
     timeout = 1800
@@ -141,9 +155,10 @@ async def main():
     start_time.hour
     try:
         async with asyncio.timeout(timeout):
-            await asyncio.gather(all_arrivals(), lift_operation(), visualize_operation())
+            # await asyncio.gather(all_arrivals(), lift_operation(), visualize_operation())
+            await asyncio.gather(all_arrivals(), lift_operation(), print_operation())
     except asyncio.TimeoutError:
-        print('timeout: save passengers to file')
+        print_st('timeout: save passengers to file')
         time_start_str = f'{start_time.hour:02}_{start_time.minute:02}_{start_time.second:02}'
         out_file = f'../data/PAMultLift_{time_start_str}.csv'
         PASSENGERS.df.sort_values(['status', 'dir', 'source', 'trip_start_time']) \

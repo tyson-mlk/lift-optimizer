@@ -1,5 +1,6 @@
 from math import sqrt
 from metrics.LiftSpec import LiftSpec
+from utils.Logging import print_st
 
 
 class CalcAccelModelMovingStatus:
@@ -162,5 +163,5 @@ class CalcAccelModelMovingStatus:
         else:
             velocity_str = 'stopping'
         print_str = height_str + velocity_str
-        print(print_str)
+        print_st(print_str)
         return print_str

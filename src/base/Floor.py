@@ -2,7 +2,7 @@ from logging import INFO, DEBUG
 from datetime import datetime
 from pandas import NaT
 
-from utils.Logging import get_logger
+from utils.Logging import get_logger, print_st
 
 class Floor:
     def __init__(self, floorname, height) -> None:
