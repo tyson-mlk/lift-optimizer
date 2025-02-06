@@ -30,7 +30,7 @@ def transform_density_df(df):
     density_df = df
     density_df['floor'] = density_df.iloc[:,0]
     density_df['height'] = density_df.iloc[:,1]
-    density_df = density_df.iloc[1:,2:]
+    print('in transform density df', density_df)
     x = density_df.height 
     yuw = np.array(density_df.density_up.Waiting)
     yu1 = np.array(density_df.density_up['Lift A'])
@@ -106,30 +106,3 @@ def plot(lifts_df, floors_df, density_df):
     axu.legend(bbox_to_anchor=(1.2,1), loc='upper center')
 
     return fig
-
-# plt.show()
-
-# TODO:
-# make and use svg file for lift location
-
-# show lift passenger travel density (done, to embed into a chart)
-# show breakdown of overall travel density by individual lifts and waiting passengers (done)
-
-# embed to streamlit
-# perform live update on streamlit
-
-# # customize marker from svg file
-# from svgpathtools import svg2paths
-# from svgpath2mpl import parse_path
-
-# def generate_marker_from_svg(svg_path):
-#     image_path, attributes = svg2paths(svg_path)
-
-#     image_marker = parse_path(attributes[0]['d'])
-
-#     image_marker.vertices -= image_marker.vertices.mean(axis=0)
-
-#     image_marker = image_marker.transformed(mpl.transforms.Affine2D().rotate_deg(180))
-#     image_marker = image_marker.transformed(mpl.transforms.Affine2D().scale(-1,1))
-
-#     return image_marker

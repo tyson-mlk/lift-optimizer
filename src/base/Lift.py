@@ -29,6 +29,7 @@ class Lift:
         self.calculate_passenger_count()
         self.model = LiftSpec(model=model)
         # lift movement state
+        self.next_height = self.height
         self.redirect_state = False
         self.floor_move_state = {
             'start_move_floor':self.floor,

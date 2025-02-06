@@ -8,11 +8,16 @@ After running through 1 hour, passenger records are saved to file
 import asyncio
 from random import expovariate
 from datetime import datetime
+import streamlit as st
+import altair as alt
+from numpy import nan
+
 from base.FloorList import FLOOR_LIST
 from base.Passenger import Passenger
 from base.PassengerList import PASSENGERS
 from base.Lift import Lift
 from metrics.Summary import floor_request_snapshot, density_summary, lift_summary
+from utils.Plotting import plot
 
 TRIPS = [(
     source, target,
@@ -119,21 +124,44 @@ async def lift_operation():
 
 # for developing visuals
 async def visualize_operation():
-    await asyncio.sleep(120)
+    await asyncio.sleep(1)
     print('SUMMARY start')
     
-    lift_summary_df = lift_summary()
-    floor_summary_df = floor_request_snapshot(FLOOR_LIST)
-    density_summary_df = density_summary(floor_summary_df, PASSENGERS.df)
-    floor_out_file = '../data/floor_summary.csv'
-    density_out_file = '../data/density_summary.csv'
-    lift_out_file = '../data/lift_summary.csv'
-    print('SUMMARY output')
-    floor_summary_df.to_csv(floor_out_file, index=None)
-    density_summary_df.to_csv(density_out_file)
-    lift_summary_df.to_csv(lift_out_file, index=None)
-    print('SUMMARY done')
-    raise asyncio.TimeoutError
+    with st.empty():
+        it = 1
+        while True:
+            st.write(f'iteration {it}')
+            lift_summary_df = lift_summary()
+            floor_summary_df = floor_request_snapshot(FLOOR_LIST)
+            density_summary_df = density_summary(floor_summary_df, PASSENGERS.df)
+            plt = plot(lift_summary_df, floor_summary_df, density_summary_df)
+            st.pyplot(plt)
+
+            # barplot_df = PASSENGERS.df.groupby(['status', 'lift']).size() \
+            #     .reset_index().rename(columns={0:'counts'})
+            # barplot_df.loc[barplot_df.status == 'Waiting', 'lift'] = nan
+            # chart = alt.Chart(barplot_df) \
+            #     .mark_bar() \
+            #     .encode(
+            #         column='status',
+            #         x='lift',
+            #         y='counts'
+            #     )
+            # st.altair_chart(chart)
+            await asyncio.sleep(3)
+            it += 1
+    # lift_summary_df = lift_summary()
+    # floor_summary_df = floor_request_snapshot(FLOOR_LIST)
+    # density_summary_df = density_summary(floor_summary_df, PASSENGERS.df)
+    # floor_out_file = '../data/floor_summary.csv'
+    # density_out_file = '../data/density_summary.csv'
+    # lift_out_file = '../data/lift_summary.csv'
+    # print('SUMMARY output')
+    # floor_summary_df.to_csv(floor_out_file, index=None)
+    # density_summary_df.to_csv(density_out_file)
+    # lift_summary_df.to_csv(lift_out_file, index=None)
+    # print('SUMMARY done')
+    # raise asyncio.TimeoutError
 
 async def main():
     timeout = 1800
