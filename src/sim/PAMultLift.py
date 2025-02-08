@@ -124,7 +124,8 @@ async def lift_operation():
 
 # for developing visuals
 async def visualize_operation():
-    await asyncio.sleep(1)
+    import matplotlib.pyplot as plt
+    await asyncio.sleep(5)
     print('SUMMARY start')
     
     with st.empty():
@@ -134,8 +135,9 @@ async def visualize_operation():
             lift_summary_df = lift_summary()
             floor_summary_df = floor_request_snapshot(FLOOR_LIST)
             density_summary_df = density_summary(floor_summary_df, PASSENGERS.df)
-            plt = plot(lift_summary_df, floor_summary_df, density_summary_df)
-            st.pyplot(plt)
+            fig = plot(lift_summary_df, floor_summary_df, density_summary_df)
+            # plt.savefig(f'../data/figure_{it}.png')
+            st.pyplot(fig)
 
             # barplot_df = PASSENGERS.df.groupby(['status', 'lift']).size() \
             #     .reset_index().rename(columns={0:'counts'})
@@ -148,6 +150,9 @@ async def visualize_operation():
             #         y='counts'
             #     )
             # st.altair_chart(chart)
+            # density_out_file = f'../data/density_summary_{it}.csv'
+            # density_summary_df.to_csv(density_out_file)
+
             await asyncio.sleep(3)
             it += 1
     # lift_summary_df = lift_summary()
