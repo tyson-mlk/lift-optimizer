@@ -3,7 +3,7 @@ from datetime import datetime
 from logging import INFO, DEBUG
 import asyncio
 
-from utils.Logging import get_logger
+from utils.Logging import get_logger, print_st
 from base.Passenger import Passenger
 from base.Floor import Floor
 
@@ -55,6 +55,8 @@ class PassengerList:
             self.reassignment_rsp_queue = asyncio.Queue()
             self.arrival_lock = asyncio.Lock()
             self.tracking_lifts = []
+        # temp for dev of print stream
+        self.print_queue = asyncio.Queue()
 
     def __del__(self):
         self.log(f"{self.name}: start destructing")
@@ -245,6 +247,7 @@ class PassengerList:
         floor = FLOOR_LIST.get_floor(passenger.source)
         floor.passengers.add_passenger_list(passenger_df)
         floor.log(f"{floor.name}: 1 new arrival; count is {floor.passengers.count_passengers()}")
+        print_st(f"1 New passenger arrived at {floor.name} traveling to {passenger.target}")
 
         # if not all([i in self.df.index for i in range(1,passenger.id+1)]):
         #     print(list(range(1,passenger.id+1)), self.df.index)
@@ -293,6 +296,9 @@ class PassengerList:
             floor.log(
                 f"{floor.name}: {(passengers.df.source == floor_name).sum()} new arrival;"
                 f" count is {floor.passengers.count_passengers()}"
+            )
+            print_st(
+                f"{(passengers.df.source == floor_name).sum()} new passenger arrived at {floor.name}"
             )
 
     def complement_passenger_list(self, passenger_list):
@@ -451,6 +457,14 @@ class PassengerList:
     def passenger_source_scan(self) -> pd.DataFrame:
         "scan for all passenger source floors"
         return self.df.loc[:,['source', 'dir']].drop_duplicates()
+    
+    def boarded_lift_info(self) -> pd.DataFrame:
+        def get_boarded_lift(status, lift):
+            if status == 'Waiting':
+                return 'Waiting'
+            return lift
+        return self.df.loc[self.df.status != 'Arrived', :] \
+            .apply(lambda df: get_boarded_lift(df.status, df.lift), axis=1)
     
     def update_passenger_metrics(self, print_passenger_metrics,
                                  floor_list, ordering_type='source'):

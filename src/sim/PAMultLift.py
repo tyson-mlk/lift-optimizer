@@ -8,10 +8,15 @@ After running through 1 hour, passenger records are saved to file
 import asyncio
 from random import expovariate
 from datetime import datetime
+import streamlit as st
+
 from base.FloorList import FLOOR_LIST
 from base.Passenger import Passenger
 from base.PassengerList import PASSENGERS
 from base.Lift import Lift
+from metrics.Summary import floor_request_snapshot, density_summary, lift_summary
+from utils.Plotting import plot
+from utils.Logging import print_st
 
 TRIPS = [(
     source, target,
@@ -35,15 +40,15 @@ for source in FLOOR_LIST.list_floors():
             dir = 'D'
         key = (source, target, dir)
         if (source == '000') | (target == '000'):
-            trip_arrival_rates[key] = 0.00005 # sparse request
+            # trip_arrival_rates[key] = 0.00005 # sparse request
             # trip_arrival_rates[key] = 0.003 # one lift busy
             # trip_arrival_rates[key] = 0.006 # two lifts busy
-            # trip_arrival_rates[key] = 0.012 # five lifts busy
+            trip_arrival_rates[key] = 0.012 # five lifts busy
         else:
-            trip_arrival_rates[key] = 0.00005 # sparse request
+            # trip_arrival_rates[key] = 0.00005 # sparse request
             # trip_arrival_rates[key] = 0.0002 # one lift busy
             # trip_arrival_rates[key] = 0.0004 # two lifts busy
-            # trip_arrival_rates[key] = 0.001 # five lifts busy
+            trip_arrival_rates[key] = 0.001 # five lifts busy
 
 def increment_counter(counter_type):
     COUNTERS[counter_type] += 1
@@ -70,6 +75,7 @@ async def cont_exp_gen(trip, rate=1.0):
             await asyncio.sleep(0)
     except MemoryError:
         print('memory error')
+        PASSENGERS.log('memory error')
         return None
 
 # simulates run of multiple continuous exponential processes in fixed time
@@ -77,31 +83,31 @@ async def all_arrivals():
     jobs = [cont_exp_gen(trip=k, rate=v) for k,v in trip_arrival_rates.items()]
     jobs += [PASSENGERS.reassignment_listener()]
     start_time = datetime.now()
-    print(f'all start: {start_time}')
+    print_st(f'Arrivals start: {start_time}')
     arrival_timeout = 1680
     try:
         async with asyncio.timeout(arrival_timeout):
             await asyncio.gather(*jobs)
     except asyncio.TimeoutError:
-        print('PASSENGERS ARRIVAL COMPLETE')
+        print_st('All arrivals completed')
         PASSENGERS.log('PASSENGERS ARRIVAL COMPLETE')
     
 async def lift_operation():
-    l1 = Lift('L1', '000', 'U')
+    l1 = Lift('Lift A', 'G', 'U')
     PASSENGERS.register_lift(l1)
-    l2 = Lift('L2', '000', 'U')
+    l2 = Lift('Lift B', 'G', 'U')
     PASSENGERS.register_lift(l2)
-    l3 = Lift('L3', '000', 'U')
+    l3 = Lift('Lift C', 'G', 'U')
     PASSENGERS.register_lift(l3)
-    l4 = Lift('L4', '000', 'U')
+    l4 = Lift('Lift D', 'G', 'U')
     PASSENGERS.register_lift(l4)
-    l5 = Lift('L5', '000', 'U')
+    l5 = Lift('Lift E', 'G', 'U')
     PASSENGERS.register_lift(l5)
-    # l6 = Lift('L6', '000', 'U')
+    # l6 = Lift('L6', 'G', 'U')
     # PASSENGERS.register_lift(l6)
-    # l7 = Lift('L7', '000', 'U')
+    # l7 = Lift('L7', 'G', 'U')
     # PASSENGERS.register_lift(l7)
-    # l8 = Lift('L8', '000', 'U')
+    # l8 = Lift('L8', 'G', 'U')
     # PASSENGERS.register_lift(l8)
 
     # need to let lifts take up only unassigned passengers
@@ -116,13 +122,61 @@ async def lift_operation():
         # l8.lift_baseline_operation()
     )
 
+async def visualize_figure(col_figure):
+    with col_figure:
+        with st.empty():
+            it = 1
+            while True:
+                lift_summary_df = lift_summary()
+                floor_summary_df = floor_request_snapshot(FLOOR_LIST)
+                density_summary_df = density_summary(floor_summary_df, PASSENGERS.df)
+                fig = plot(lift_summary_df, floor_summary_df, density_summary_df)
+                st.pyplot(fig)
+
+                # temporary until charts plot faster
+                await asyncio.sleep(3)
+                it += 1
+
+async def visualize_text(col_text):
+    import sys
+
+    with col_text:
+        text_id = "text-id"
+        text_container = st.container(height=800, key=text_id)
+
+        # scroll_script = f"""
+        # <script>
+        # var textArea = document.getElementById("{text_id}");
+        # textArea.scrollTop = textArea.scrollHeight;
+        # </script>
+        # """
+
+        try:
+            with text_container:
+                while True:
+                    msg = await PASSENGERS.print_queue.get()
+                    text_container.write(msg)
+                    # text_container.markdown(scroll_script, unsafe_allow_html=True)
+        except Exception:
+            exception_type, value, traceback = sys.exc_info()
+            PASSENGERS.log(f'print_operation error info {exception_type, value, traceback}')
+
+# for developing visuals
+async def visualize_operation():
+    col_figure, col_text = st.columns([7, 3])
+
+    await asyncio.sleep(5)
+    print('SUMMARY start')
+    
+    await asyncio.gather(visualize_text(col_text), visualize_figure(col_figure))
+
 async def main():
     timeout = 1800
     start_time = datetime.now()
     start_time.hour
     try:
         async with asyncio.timeout(timeout):
-            await asyncio.gather(all_arrivals(), lift_operation())
+            await asyncio.gather(visualize_operation(), all_arrivals(), lift_operation())
     except asyncio.TimeoutError:
         print('timeout: save passengers to file')
         time_start_str = f'{start_time.hour:02}_{start_time.minute:02}_{start_time.second:02}'
