@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import pandas as pd
+# import pandas as pd
 
 # lifts_df = pd.read_csv('../data/lift_summary.csv')
 
@@ -50,7 +50,7 @@ def plot(lifts_df, floors_df, density_df):
     floors_u_df = transform_floors_u_df(floors_df)
     x, yuw, yu1, yu2, yu3, yu4, yu5, ydw, yd1, yd2, yd3, yd4, yd5 = transform_density_df(density_df)
 
-    fig = plt.figure(constrained_layout=True, figsize=(8, 9))
+    fig = plt.figure(constrained_layout=True, figsize=(6, 4))
     subfigs = fig.subfigures(2, 1)
     subfig_top, subfig_bot = list(subfigs.flat)
     subfig_bot.suptitle('Travel Request Density')
@@ -69,7 +69,7 @@ def plot(lifts_df, floors_df, density_df):
     ax2.tick_params(left=True, right=True, labelleft=True, labelright=True)
     ax2.title.set_text('Lift Locations and Targets\n')
 
-    ax1.scatter(data=floors_u_df, y="height", x="count", marker="o", color="darkgray", s=100)
+    ax1.scatter(data=floors_u_df, y="height", x="count", marker="o", color="darkgray", s=35)
     # ax1.barh(data=floors_u_df, y="height", width="count", color="darkgray")
     ax1.invert_xaxis()
     ax1.tick_params(bottom=False, left=False, labelleft=False, labelbottom=False)
@@ -77,7 +77,7 @@ def plot(lifts_df, floors_df, density_df):
     ax1.set_frame_on(False)
     ax1.set_title('Waiting\nPassengers\n(U)', ha='left')
 
-    ax3.scatter(data=floors_d_df, y="height", x="count", marker="o", color="darkgray", s=100)
+    ax3.scatter(data=floors_d_df, y="height", x="count", marker="o", color="darkgray", s=35)
     # ax3.barh(data=floors_d_df, y="height", width="count", color="darkgray")
     ax3.tick_params(bottom=False, left=False, labelleft=False, labelbottom=False)
     # ax3.set_xlabel('Floor count')
@@ -87,9 +87,9 @@ def plot(lifts_df, floors_df, density_df):
     max_x = max(ax1.get_xlim()[1], ax3.get_xlim()[1])
     ax1.set_xlim((max_x+0.5, -0.5))
     ax3.set_xlim((-0.5, max_x+0.5))
-    max_y = max(ax1.get_ylim()[1], ax3.get_ylim()[1])
-    ax1.set_ylim((max_y+2.5, -2.5))
-    ax3.set_ylim((-2.5, max_y+2.5))
+    # max_y = max(ax1.get_ylim()[1], ax3.get_ylim()[1])
+    ax1.set_ylim((61.5, -2.5))
+    ax3.set_ylim((-2.5, 61.5))
 
 # subfig_top.subplots_adjust(wspace=0.25)
 
@@ -114,6 +114,6 @@ def plot(lifts_df, floors_df, density_df):
     axu.tick_params(bottom=True, left=False, labelleft=True)
     axd.tick_params(bottom=True, left=False, labelright=True)
     axd.set_yticks([0., 17., 32., 47., 59.], ['G', 'L05', 'L10', 'L15', 'L19'])
-    axu.legend(bbox_to_anchor=(1.2,1), loc='upper center')
+    axu.legend(bbox_to_anchor=(1.3,1), loc='upper center')
 
     return fig

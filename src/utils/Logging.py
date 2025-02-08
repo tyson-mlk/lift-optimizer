@@ -1,5 +1,6 @@
 import logging
 import os, errno
+import streamlit as st
 
 def get_logger(logger_name, logger_class, logging_level):
 
@@ -32,3 +33,10 @@ def get_logger(logger_name, logger_class, logging_level):
     py_handler.setFormatter(py_formatter)
     py_logger.addHandler(py_handler)
     return py_logger
+
+def print_st(*args):
+    from base.PassengerList import PASSENGERS
+
+    print(*args)
+    msg = ' '.join([str(a) for a in args])
+    PASSENGERS.print_queue.put_nowait(msg)
