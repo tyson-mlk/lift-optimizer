@@ -1,6 +1,15 @@
 # Lift Optimizer
 Proof of Concept for simulating, visualizing and ultimately optimizing lifts serving passengers on floors
 
+# Demo
+To run trial app, install streamlit version 1.41.1. Then on terminal
+```
+cd src
+streamlit run dev.py
+```
+
+# Optimization
+
 ## Objective:
 - Minimize passenger travel time taking lifts, this includes
 	1. time waiting for lifts
@@ -54,6 +63,5 @@ Baseline model current drawbacks and potential improvements:
 - Lifts do not coordinate to segregate targeted passengers, as they serve immediately passengers who arrive the earliest. This is non-optimal in having to serve more floors and take more stops.
 
 ## TODO:
-- add live visualizer for multi-floor and multi-lift with passenger counts
 - evaluate travel time
 - modularize lift coordination
