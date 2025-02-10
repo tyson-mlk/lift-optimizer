@@ -3,9 +3,9 @@ from datetime import datetime
 from logging import INFO, DEBUG
 import asyncio
 
-from utils.Logging import get_logger, print_st
-from base.Passenger import Passenger
-from base.Floor import Floor
+from src.utils.Logging import get_logger, print_st
+from src.base.Passenger import Passenger
+from src.base.Floor import Floor
 
 class PassengerList:
     schema = {
@@ -57,6 +57,7 @@ class PassengerList:
             self.tracking_lifts = []
         # temp for dev of print stream
         self.print_queue = asyncio.Queue()
+        self.visual_lock = asyncio.Lock()
 
     def __del__(self):
         self.log(f"{self.name}: start destructing")
@@ -168,7 +169,7 @@ class PassengerList:
         time = datetime.now()
         lift_order = {}
 
-        from base.FloorList import FLOOR_LIST
+        from src.base.FloorList import FLOOR_LIST
         target_height = FLOOR_LIST.get_floor(arrival_source).height
         for lift in PASSENGERS.tracking_lifts:
             if (lift.dir == arrival_dir or lift.dir == 'S'):
@@ -185,7 +186,7 @@ class PassengerList:
         time = datetime.now()
         lift_order = {}
 
-        from base.FloorList import FLOOR_LIST
+        from src.base.FloorList import FLOOR_LIST
         target_height = FLOOR_LIST.get_floor(arrival_source).height
         for lift in PASSENGERS.tracking_lifts:
             if lift.dir != 'S':
@@ -243,7 +244,7 @@ class PassengerList:
             f"count is {self.count_traveling_passengers()}"
         )
         
-        from base.FloorList import FLOOR_LIST
+        from src.base.FloorList import FLOOR_LIST
         floor = FLOOR_LIST.get_floor(passenger.source)
         floor.passengers.add_passenger_list(passenger_df)
         floor.log(f"{floor.name}: 1 new arrival; count is {floor.passengers.count_passengers()}")
@@ -287,7 +288,7 @@ class PassengerList:
             f"count is {self.count_traveling_passengers()}"
         )
         
-        from base.FloorList import FLOOR_LIST
+        from src.base.FloorList import FLOOR_LIST
         for floor_name in passengers.df.source.unique():
             floor = FLOOR_LIST.get_floor(floor_name)
             floor.passengers.add_passenger_list(
@@ -390,7 +391,7 @@ class PassengerList:
                 return existing_assignment
     
     def assign_lift(self, lift, assign_multi=True):
-        from base.Lift import Lift
+        from src.base.Lift import Lift
 
         assert type(lift) is Lift
         if assign_multi:
@@ -402,7 +403,7 @@ class PassengerList:
             self.df.loc[self.df.status == 'Waiting', 'lift'] = lift.name
     
     def assign_lift_for_floor(self, lift, floor, assign_multi=True):
-        from base.Lift import Lift
+        from src.base.Lift import Lift
 
         assert type(lift) is Lift
         assert type(floor) is Floor
@@ -414,7 +415,7 @@ class PassengerList:
             self.df.loc[(self.df.status == 'Waiting') & (self.df.source==floor.name), 'lift'] = lift.name
     
     def assign_lift_for_selection(self, lift, passenger_list, assign_multi=True):
-        from base.Lift import Lift
+        from src.base.Lift import Lift
 
         assert type(lift) is Lift
         assert type(passenger_list) is PassengerList
@@ -426,7 +427,7 @@ class PassengerList:
             self.df.loc[passenger_list.df.index, 'lift'] = lift.name
 
     def unassign_lift_for_selection(self, lift, passenger_list):
-        from base.Lift import Lift
+        from src.base.Lift import Lift
 
         assert type(lift) is Lift
         assert type(passenger_list) is PassengerList
@@ -468,7 +469,7 @@ class PassengerList:
     
     def update_passenger_metrics(self, print_passenger_metrics,
                                  floor_list, ordering_type='source'):
-        from metrics.TimeMetrics import calculate_all_metrics
+        from src.metrics.TimeMetrics import calculate_all_metrics
 
         self.df = calculate_all_metrics(self).df
         if print_passenger_metrics:

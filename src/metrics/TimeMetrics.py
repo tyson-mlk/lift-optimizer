@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from base.PassengerList import PassengerList
+from src.base.PassengerList import PassengerList
 
 
 def calculate_travel_time(passengers):

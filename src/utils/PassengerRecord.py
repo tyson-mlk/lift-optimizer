@@ -1,6 +1,6 @@
-from base.Passenger import Passenger
-from base.PassengerList import PassengerList
-from base.Floor import Floor
+from src.base.Passenger import Passenger
+from src.base.PassengerList import PassengerList
+from src.base.Floor import Floor
 from datetime import datetime
 import pandas as pd
 

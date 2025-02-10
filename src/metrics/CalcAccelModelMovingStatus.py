@@ -1,5 +1,5 @@
 from math import sqrt
-from metrics.LiftSpec import LiftSpec
+from src.metrics.LiftSpec import LiftSpec
 
 
 class CalcAccelModelMovingStatus:

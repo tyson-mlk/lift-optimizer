@@ -1,6 +1,6 @@
-import base.Passenger
-import base.Floor
-import base.PassengerList
-import base.FloorList
-import base.Lift
+import src.base.Passenger
+import src.base.Floor
+import src.base.PassengerList
+import src.base.FloorList
+import src.base.Lift
 

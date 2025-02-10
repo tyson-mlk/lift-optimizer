@@ -1,8 +1,8 @@
 import asyncio
 from datetime import datetime
-from base.Passenger import Passenger
-from base.PassengerList import PASSENGERS
-from base.Lift import Lift
+from src.base.Passenger import Passenger
+from src.base.PassengerList import PASSENGERS
+from src.base.Lift import Lift
 
 async def passenger_arrival(source_floor, target_floor, start_time):
     new_passenger = Passenger(source_floor, target_floor, start_time)

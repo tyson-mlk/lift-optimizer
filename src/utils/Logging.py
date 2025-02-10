@@ -35,8 +35,10 @@ def get_logger(logger_name, logger_class, logging_level):
     return py_logger
 
 def print_st(*args):
-    from base.PassengerList import PASSENGERS
+    from src.base.PassengerList import PASSENGERS
 
     print(*args)
     msg = ' '.join([str(a) for a in args])
+    if PASSENGERS.visual_lock.locked():
+        PASSENGERS.visual_lock.release()
     PASSENGERS.print_queue.put_nowait(msg)

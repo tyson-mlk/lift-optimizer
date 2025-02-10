@@ -1,6 +1,6 @@
 import pandas as pd
 
-from base.Floor import Floor
+from src.base.Floor import Floor
 
 class FloorList:
     def __init__(self, floors, floor_heights):
