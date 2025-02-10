@@ -1,4 +1,4 @@
-from base.Lift import Lift
+from src.base.Lift import Lift
 
 
 def boarding_time(lift: Lift, pre_board_cnt, boarding_off_cnt, boarding_on_cnt) -> float:

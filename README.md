@@ -2,10 +2,10 @@
 Proof of Concept for simulating, visualizing and ultimately optimizing lifts serving passengers on floors
 
 # Demo
-To run trial app, install streamlit version 1.41.1. Then on terminal
+To run trial app, install python version 3.12.6. Then on terminal
 ```
-cd src
-streamlit run dev.py
+pip install requirements.txt
+streamlit run streamlit.py
 ```
 
 # Optimization
@@ -26,9 +26,9 @@ Time for lifts to off-board and on-board is 0.5 and 1.5 s per passenger respecti
 
 ## Sample Usage
 ```
-python src/usage_travel.py
-python src/usage_lift_state.py
-python src/usage_simulation.py
+python usage_travel.py
+python usage_lift_state.py
+python usage_simulation.py
 ```
 
 ## Passenger States

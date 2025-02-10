@@ -1,10 +1,10 @@
 import asyncio
 from random import expovariate
 from datetime import datetime
-from base.Floor import Floor
-from base.FloorList import FloorList
-from base.Passenger import Passenger
-from base.PassengerList import PASSENGERS
+from src.base.Floor import Floor
+from src.base.FloorList import FloorList
+from src.base.Passenger import Passenger
+from src.base.PassengerList import PASSENGERS
 
 FLOORS = list(str(i).zfill(3) for i in range(1, 5))
 FLOOR_HEIGHTS = {'001': 0, '002': 5, '003': 8, '004': 11}

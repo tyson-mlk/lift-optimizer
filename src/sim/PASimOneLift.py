@@ -1,10 +1,10 @@
 import asyncio
 from random import expovariate
 from datetime import datetime
-from base.FloorList import FLOOR_LIST
-from base.Passenger import Passenger
-from base.PassengerList import PASSENGERS
-from base.Lift import Lift
+from src.base.FloorList import FLOOR_LIST
+from src.base.Passenger import Passenger
+from src.base.PassengerList import PASSENGERS
+from src.base.Lift import Lift
 
 TRIPS = [(
     source, target,

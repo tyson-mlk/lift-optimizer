@@ -1,6 +1,6 @@
 from math import sqrt
-from base.FloorList import FLOOR_LIST
-from metrics.LiftSpec import LiftSpec
+from src.base.FloorList import FLOOR_LIST
+from src.metrics.LiftSpec import LiftSpec
 
 
 class CalcMovingFloor:

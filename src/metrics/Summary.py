@@ -1,6 +1,6 @@
 import pandas as pd
 
-from base.PassengerList import PASSENGERS
+from src.base.PassengerList import PASSENGERS
 
 def lift_summary():
     return pd.DataFrame(

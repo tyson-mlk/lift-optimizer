@@ -10,13 +10,13 @@ from random import expovariate
 from datetime import datetime
 import streamlit as st
 
-from base.FloorList import FLOOR_LIST
-from base.Passenger import Passenger
-from base.PassengerList import PASSENGERS
-from base.Lift import Lift
-from metrics.Summary import floor_request_snapshot, density_summary, lift_summary
-from utils.Plotting import plot
-from utils.Logging import print_st
+from src.base.FloorList import FLOOR_LIST
+from src.base.Passenger import Passenger
+from src.base.PassengerList import PASSENGERS
+from src.base.Lift import Lift
+from src.metrics.Summary import floor_request_snapshot, density_summary, lift_summary
+from src.utils.Plotting import plot
+from src.utils.Logging import print_st
 
 TRIPS = [(
     source, target,
@@ -125,8 +125,9 @@ async def lift_operation():
 async def visualize_figure(col_figure):
     with col_figure:
         with st.empty():
-            it = 1
+            # it = 1
             while True:
+                await PASSENGERS.visual_lock.acquire()
                 lift_summary_df = lift_summary()
                 floor_summary_df = floor_request_snapshot(FLOOR_LIST)
                 density_summary_df = density_summary(floor_summary_df, PASSENGERS.df)
@@ -134,15 +135,17 @@ async def visualize_figure(col_figure):
                 st.pyplot(fig)
 
                 # temporary until charts plot faster
-                await asyncio.sleep(3)
-                it += 1
+                # await asyncio.sleep(3)
+                # it += 1
 
 async def visualize_text(col_text):
     import sys
 
     with col_text:
         text_id = "text-id"
+        # msg_list = []
         text_container = st.container(height=800, key=text_id)
+        # text_container = st.empty()
 
         # scroll_script = f"""
         # <script>
@@ -152,9 +155,12 @@ async def visualize_text(col_text):
         # """
 
         try:
-            with text_container:
-                while True:
-                    msg = await PASSENGERS.print_queue.get()
+            while True:
+                msg = await PASSENGERS.print_queue.get()
+                # msg_list += [msg]
+                # print_msg = "\n\n".join(msg_list)
+                with st.empty():
+                    # text_container.write(print_msg)
                     text_container.write(msg)
                     # text_container.markdown(scroll_script, unsafe_allow_html=True)
         except Exception:

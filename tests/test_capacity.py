@@ -1,9 +1,9 @@
 import asyncio
 import pandas as pd
 from datetime import datetime
-from base.Passenger import Passenger
-from base.PassengerList import PassengerList, PASSENGERS
-from base.Lift import Lift
+from src.base.Passenger import Passenger
+from src.base.PassengerList import PassengerList, PASSENGERS
+from src.base.Lift import Lift
 
 def passenger_arrival(source_floor, target_floor, direction, num, start_time):
     passenger_df = pd.concat(

@@ -2,14 +2,14 @@ from logging import INFO, DEBUG
 from datetime import datetime
 from pandas import NaT
 
-from utils.Logging import get_logger
+from src.utils.Logging import get_logger
 
 class Floor:
     def __init__(self, floorname, height) -> None:
         self.name = floorname
         self.height = height
 
-        from base.PassengerList import PassengerList
+        from src.base.PassengerList import PassengerList
         self.passengers: PassengerList = PassengerList()
 
     def init_logger(self):

@@ -3,13 +3,13 @@ import pandas as pd
 from datetime import datetime, timedelta
 from logging import INFO, DEBUG
 
-from utils.Logging import get_logger, print_st
-from base.Floor import Floor
-from base.PassengerList import PassengerList, PASSENGERS
-from base.FloorList import FLOOR_LIST, MAX_FLOOR, MIN_FLOOR
-from metrics.LiftSpec import LiftSpec
-from metrics.CalcMovingFloor import CalcMovingFloor
-from metrics.CalcAccelModelMovingStatus import CalcAccelModelMovingStatus
+from src.utils.Logging import get_logger, print_st
+from src.base.Floor import Floor
+from src.base.PassengerList import PassengerList, PASSENGERS
+from src.base.FloorList import FLOOR_LIST, MAX_FLOOR, MIN_FLOOR
+from src.metrics.LiftSpec import LiftSpec
+from src.metrics.CalcMovingFloor import CalcMovingFloor
+from src.metrics.CalcAccelModelMovingStatus import CalcAccelModelMovingStatus
 
 LIFT_CAPACITY_DEFAULT = 12
 
@@ -224,7 +224,7 @@ class Lift:
         if num_to_onboard == 0:
             return None
 
-        from metrics.BoardingTime import boarding_time
+        from src.metrics.BoardingTime import boarding_time
 
         # wait boarding time
         time_to_onboard = boarding_time(self, self.passenger_count, 0, num_to_onboard)
@@ -262,7 +262,7 @@ class Lift:
             selection = eligible_passengers.sample_passengers(self.capacity - self.passenger_count)
         passenger_list = PassengerList(selection)
 
-        from metrics.BoardingTime import boarding_time
+        from src.metrics.BoardingTime import boarding_time
 
         num_to_onboard = passenger_list.count_passengers()
         if num_to_onboard == 0:
@@ -306,7 +306,7 @@ class Lift:
             )
         passenger_list = PassengerList(selection)
         
-        from metrics.BoardingTime import boarding_time
+        from src.metrics.BoardingTime import boarding_time
 
         num_to_onboard = passenger_list.count_passengers()
         if num_to_onboard == 0:
@@ -343,7 +343,7 @@ class Lift:
         floor = FLOOR_LIST.get_floor(self.floor)
         PASSENGERS.update_arrival(self.passengers)
 
-        from metrics.BoardingTime import boarding_time
+        from src.metrics.BoardingTime import boarding_time
 
         num_to_offboard = self.passenger_count
         if num_to_offboard == 0:
@@ -363,7 +363,7 @@ class Lift:
         current_floor = FLOOR_LIST.get_floor(self.floor)
         to_offboard = self.passengers.filter_by_destination(current_floor)
 
-        from metrics.BoardingTime import boarding_time
+        from src.metrics.BoardingTime import boarding_time
 
         num_to_offboard = to_offboard.count_passengers()
         if num_to_offboard == 0:
@@ -384,7 +384,7 @@ class Lift:
         num_to_offboard = self.precalc_num_to_offboard(offboarding_mode=offboarding_mode)
         num_to_onboard = self.precalc_num_to_onboard(onboarding_mode=onboarding_mode)
 
-        from metrics.BoardingTime import boarding_time
+        from src.metrics.BoardingTime import boarding_time
 
         time_to_onboard = boarding_time(self, self.passenger_count, 0, num_to_onboard)
         time_to_offboard = boarding_time(self, self.passenger_count, num_to_offboard, 0)
@@ -591,7 +591,7 @@ class Lift:
 
         height, direction, velocity = self.get_moving_status_from_floor(time_elapsed, source_floor, target_floor)
 
-        from metrics.CalcAccelModelMovingStatus import CalcAccelModelMovingStatus
+        from src.metrics.CalcAccelModelMovingStatus import CalcAccelModelMovingStatus
         moving_status = CalcAccelModelMovingStatus(height, direction, velocity, self.model)
 
         return self.calc_time_to_move_while_moving(moving_status, proposed_floor)
