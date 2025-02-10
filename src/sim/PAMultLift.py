@@ -125,7 +125,6 @@ async def lift_operation():
 async def visualize_figure(col_figure):
     with col_figure:
         with st.empty():
-            # it = 1
             while True:
                 await PASSENGERS.visual_lock.acquire()
                 lift_summary_df = lift_summary()
@@ -133,10 +132,6 @@ async def visualize_figure(col_figure):
                 density_summary_df = density_summary(floor_summary_df, PASSENGERS.df)
                 fig = plot(lift_summary_df, floor_summary_df, density_summary_df)
                 st.pyplot(fig)
-
-                # temporary until charts plot faster
-                # await asyncio.sleep(3)
-                # it += 1
 
 async def visualize_text(col_text):
     import sys
@@ -167,13 +162,10 @@ async def visualize_text(col_text):
             exception_type, value, traceback = sys.exc_info()
             PASSENGERS.log(f'print_operation error info {exception_type, value, traceback}')
 
-# for developing visuals
 async def visualize_operation():
     col_figure, col_text = st.columns([7, 3])
 
-    await asyncio.sleep(5)
-    print('SUMMARY start')
-    
+    await asyncio.sleep(1)    
     await asyncio.gather(visualize_text(col_text), visualize_figure(col_figure))
 
 async def main():
