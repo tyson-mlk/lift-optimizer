@@ -139,7 +139,7 @@ async def visualize_text(col_text):
     with col_text:
         text_id = "text-id"
         # msg_list = []
-        text_container = st.container(height=800, key=text_id)
+        text_container = st.container(height=700, key=text_id)
         # text_container = st.empty()
 
         # scroll_script = f"""
@@ -163,7 +163,7 @@ async def visualize_text(col_text):
             PASSENGERS.log(f'print_operation error info {exception_type, value, traceback}')
 
 async def visualize_operation():
-    col_figure, col_text = st.columns([7, 3])
+    col_figure, _, col_text, _ = st.columns([7, 1, 3, 1])
 
     await asyncio.sleep(1)    
     await asyncio.gather(visualize_text(col_text), visualize_figure(col_figure))
@@ -178,6 +178,6 @@ async def main():
     except asyncio.TimeoutError:
         print('timeout: save passengers to file')
         time_start_str = f'{start_time.hour:02}_{start_time.minute:02}_{start_time.second:02}'
-        out_file = f'../data/PAMultLift_{time_start_str}.csv'
+        out_file = f'data/PAMultLift_{time_start_str}.csv'
         PASSENGERS.df.sort_values(['status', 'dir', 'source', 'trip_start_time']) \
             .to_csv(out_file)
