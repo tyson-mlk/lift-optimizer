@@ -42,9 +42,11 @@ python usage_simulation.py
 ### Baseline Lift States
 ![Lift state](data/Baseline%20Flow.png "Lift Baseline State Transitions")
 
-Baseline passenger assignment to lift is for:
-1. Lifts to not crowd-out immediate targets
-2. Marking passengers of immediate target floors so remaining lifts can calculate a u-turn
+In baseline model, lifts serve existing targets while attending to the most immediate request.
+
+Passenger are assigned in this model, so that:
+1. Lifts do not simultaneously reach out to the same immediate targets
+2. Marking passengers of immediate target floors so remaining lifts can calculate a potential u-turn
 
 The Baseline model
 - assigns passengers following the immediate nearest floor along the direction of lift, subject to lift capacity
@@ -58,9 +60,12 @@ The Baseline model
 - lift do not make any movement when no passenger is in lift or assigned to that lift while waiting
 
 Baseline model current drawbacks and potential improvements:
+- Without further coordination, lifts tend to cluster their positions over time
 - Unless there are boarding passengers, not more than one lift will target the same floor at same time. This can be non-optimal when the floor has more passengers than for one lift.
 - Lift assignment and movement does not consider potential new passenger requests in the future. It can be non-optimal for lift stationing and moving once passengers arrive.
 - Lifts do not coordinate to segregate targeted passengers, as they serve immediately passengers who arrive the earliest. This is non-optimal in having to serve more floors and take more stops.
+
+![One cluster](data/one_cluster.png "Example of Lift Positions Clustered Together")
 
 ## TODO:
 - evaluate travel time
